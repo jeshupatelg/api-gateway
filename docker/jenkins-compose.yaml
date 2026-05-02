@@ -1,0 +1,24 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    user: "1002:983"   #jenkins-docker user on host
+    container_name: jenkins
+    command: >
+      bash -c "java -jar /usr/share/jenkins/jenkins.war --prefix=/jenkins"
+    ports:
+      - "8083:8080"   # host access
+      - "50000:50000" # agent connections
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # docker socket from host mounted to create/access pods for builds
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gateway_net
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
+
+networks:
+  gateway_net:
+    external: true
