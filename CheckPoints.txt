@@ -1,0 +1,2 @@
+1. apigw deployed
+2. jenkins deployed
