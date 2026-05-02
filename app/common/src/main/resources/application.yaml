@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    # Load route rules from mounted file when present.
+    import: optional:file:/config/routes.yaml
+  cloud:
+    gateway:
+      default-filters:
+        # Uniformly request origin-keying for all pages
+        - AddResponseHeader=Origin-Agent-Cluster, ?1
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 30s
+        #to see logs
+        wiretap: true
+      httpserver:
+        wiretap: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    reactor.netty: DEBUG
