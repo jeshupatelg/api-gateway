@@ -1,14 +1,45 @@
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: api-gateway
   config:
-    # Load route rules from mounted file when present.
-    import: optional:file:/config/routes.yaml
+    import:
+      # Route predicates/targets (existing behaviour).
+      - optional:file:/config/routes.yaml
+      # Optional overrides for gateway.security.* (e.g. role → path mapping).
+      - optional:file:/config/security.yaml
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}
+          jwk-set-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/certs
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${KEYCLOAK_CLIENT_ID:apigw-client}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:changeme}
+            authorization-grant-type: authorization_code
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            authorization-uri: ${KEYCLOAK_ISSUER_URI:https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}/protocol/openid-connect/auth
+            token-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/token
+            jwk-set-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/certs
+            user-info-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/userinfo
+            user-name-attribute: preferred_username
   cloud:
     gateway:
+      forwarded:
+        enabled: false
       default-filters:
         # Uniformly request origin-keying for all pages
         - AddResponseHeader=Origin-Agent-Cluster, ?1
@@ -20,6 +51,17 @@ spring:
       httpserver:
         wiretap: true
 
+# Authorization after Keycloak login: realm roles → allowed URL patterns (Ant-style).
+# This does not define upstream routes; keep route predicates in routes.yaml aligned with these paths.
+gateway:
+  security:
+    role-path-access:
+      admin:
+        - /**
+      devops:
+        - /jenkins
+        - /jenkins/**
+
 management:
   endpoints:
     web:
@@ -28,5 +70,5 @@ management:
 
 logging:
   level:
-    org.springframework.cloud.gateway: TRACE
+    org.springframework.cloud.gateway: DEBUG
     reactor.netty: DEBUG

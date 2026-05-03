@@ -1,2 +1,5 @@
 1. apigw deployed
 2. jenkins deployed
+3. keycloak deployed and integrated at apigw
+    - add csrf filtering
+    - potentially shift yaml config to filters

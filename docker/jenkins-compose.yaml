@@ -1,12 +1,12 @@
 services:
   jenkins:
     image: jenkins/jenkins:lts
-    user: "1002:983"   #jenkins-docker user on host
+    user: "1002:983"   #jenkins-docker:docker user:grp on host
     container_name: jenkins
     command: >
       bash -c "java -jar /usr/share/jenkins/jenkins.war --prefix=/jenkins"
     ports:
-      - "8083:8080"   # host access
+      #- "8083:8080"   # host access
       - "50000:50000" # agent connections
     volumes:
       - jenkins_home:/var/jenkins_home

@@ -1,0 +1,38 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    command: start-dev
+    environment:
+      # bootstrap admin (new variables)
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+      # public address Keycloak should use to build links (includes the /keycloak path)
+      KC_HOSTNAME: "https://apigw.homedesk.dpdns.org/keycloak"
+
+      # relax strict hostname checks so proxied requests are accepted
+      KC_HOSTNAME_STRICT: "false"
+
+      # ensure Keycloak uses X-Forwarded-* headers for redirects and absolute URLs
+      #PROXY_ADDRESS_FORWARDING: "true"
+      KC_PROXY_HEADERS: "xforwarded"
+
+      # enable hostname feature (if your Keycloak build requires explicit enabling)
+      # If docs mention hostname:v2, use "hostname:v2" instead of "hostname"
+      KC_FEATURES: "hostname:v2"
+
+      # optional: keep for compatibility, but KC_HOSTNAME is authoritative
+      # KEYCLOAK_FRONTEND_URL: "https://apigw.homedesk.dpdns.org/keycloak"
+    volumes:
+      - keycloak_home:/opt/keycloak/data
+    networks:
+      - gateway_net
+    restart: unless-stopped
+
+volumes:
+  keycloak_home:
+
+networks:
+  gateway_net:
+    external: true
