@@ -68,7 +68,14 @@ management:
       exposure:
         include: health,info
 
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty: DEBUG
+#logging:
+#  level:
+#    org.springframework.cloud.gateway: INFO
+#    reactor.netty: INFO
+
+api-gateway:
+  firewall:
+    relaxed-patterns: "/jenkins/administrativeMonitor/hudson.diagnosis.ReverseProxySetupMonitor/testForReverseProxySetup/"
+  exchange:
+    logging:
+      enabled: false

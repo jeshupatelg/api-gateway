@@ -6,4 +6,4 @@ COPY app/common/target/api-gateway.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/opt/api-gateway/app.jar"]
+ENTRYPOINT ["java", "-Dlogging.config=/config/logback.xml", "-jar", "/opt/api-gateway/app.jar"]

@@ -13,23 +13,16 @@ spring:
           predicates:
             - Path=/jenkins/**
           filters:
-            - AddRequestHeader=X-Forwarded-Prefix,/jenkins
             - PreserveHostHeader
-            - AddRequestHeader=X-Forwarded-Proto,https
-            - AddRequestHeader=X-Forwarded-Port,443
-            - AddRequestHeader=X-Forwarded-Host,apigw.homedesk.dpdns.org
-            - RemoveRequestHeader=Forwarded
         - id: keycloak-service
           uri: http://keycloak:8080
           order: 0
           predicates:
             - Path=/keycloak/**
           filters:
-            #- AddRequestHeader=X-Forwarded-Prefix,/keycloak
             - AddResponseHeader=Cache-Control,no-store,no-cache,must-revalidate,max-age=0
             - AddResponseHeader=Pragma,no-cache
             - StripPrefix=1
             - PreserveHostHeader
             - AddRequestHeader=X-Forwarded-Proto,https
             - AddRequestHeader=X-Forwarded-Port,443
-            #- AddRequestHeader=X-Forwarded-Host,apigw.homedesk.dpdns.org
