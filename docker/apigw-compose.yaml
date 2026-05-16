@@ -1,17 +1,19 @@
 services:
   api-gateway:
-    image: jeshupatelg/apigw-homeserver:ed15
+    image: jeshupatelg/apigw-homeserver:${APIGW_VERSION:-ed15}
     container_name: api-gateway
     # entrypoint: ["java", "-Dlogging.config=/config/logback.xml", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/opt/api-gateway/app.jar"]
     ports:
-      - "192.168.29.96:2345:8080"   # expose gateway externally
+      - "${GATEWAY_HOST_IP}:${GATEWAY_HOST_PORT}:8080"   # expose gateway externally
     #   - "5005:5005"                 # expose JVM debug port
     environment:
       # Same vars as app/common/src/main/resources/application.yaml; override via shell or .env beside this file.
       SERVER_PORT: ${SERVER_PORT:-8080}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apigw-client}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-gP3EbDBhHOF11rEOZ19JTtIZ1fvBwlbE}
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
     volumes:
       - ./routes.yaml:/config/routes.yaml:ro
       - ./security.yaml:/config/security.yaml:ro

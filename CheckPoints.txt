@@ -3,4 +3,4 @@
 3. keycloak deployed and integrated at apigw
     - add csrf filtering
     - potentially shift yaml config to filters
-4. logback config, reverse-proxy issue resolved, jenkins-slave with maven
+4. logback config, reverse-proxy issue resolved, jenkins-slave with maven, cleanup hardcoded secrets

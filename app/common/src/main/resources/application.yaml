@@ -15,14 +15,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}
-          jwk-set-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
             provider: keycloak
             client-id: ${KEYCLOAK_CLIENT_ID:apigw-client}
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:changeme}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
             authorization-grant-type: authorization_code
             scope:
               - openid
@@ -31,10 +31,10 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            authorization-uri: ${KEYCLOAK_ISSUER_URI:https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}/protocol/openid-connect/auth
-            token-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/token
-            jwk-set-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/certs
-            user-info-uri: http://keycloak:8080/realms/homeserver/protocol/openid-connect/userinfo
+            authorization-uri: ${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/auth
+            token-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+            jwk-set-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+            user-info-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/userinfo
             user-name-attribute: preferred_username
   cloud:
     gateway:

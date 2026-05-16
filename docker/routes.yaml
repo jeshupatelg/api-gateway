@@ -2,20 +2,15 @@ spring:
   cloud:
     gateway:
       routes:
-        # - id: nginx-service
-        #   uri: http://192.168.29.96:8080
-        #   order: 100
-        #   predicates:
-        #     - Path=/**
         - id: jenkins-service
-          uri: http://jenkins:8080
+          uri: ${JENKINS_INTERNAL_URL:-http://jenkins:8080}
           order: 1
           predicates:
             - Path=/jenkins/**
           filters:
             - PreserveHostHeader
         - id: keycloak-service
-          uri: http://keycloak:8080
+          uri: ${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080}
           order: 0
           predicates:
             - Path=/keycloak/**

@@ -5,11 +5,11 @@ services:
     command: start-dev
     environment:
       # bootstrap admin (new variables)
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin #disabled user
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin #disabled password
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER} #disabled user
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD} #disabled password
 
       # public address Keycloak should use to build links (includes the /keycloak path)
-      KC_HOSTNAME: "https://apigw.homedesk.dpdns.org/keycloak"
+      KC_HOSTNAME: "${KEYCLOAK_HOSTNAME}"
 
       # relax strict hostname checks so proxied requests are accepted
       KC_HOSTNAME_STRICT: "false"
@@ -23,7 +23,7 @@ services:
       KC_FEATURES: "hostname:v2"
 
       # optional: keep for compatibility, but KC_HOSTNAME is authoritative
-      # KEYCLOAK_FRONTEND_URL: "https://apigw.homedesk.dpdns.org/keycloak"
+      # KEYCLOAK_FRONTEND_URL: "${KEYCLOAK_HOSTNAME}"
     volumes:
       - keycloak_home:/opt/keycloak/data
     networks:
