@@ -80,7 +80,7 @@ pipeline {
 
         stage('Deploy api-gateway') {
             steps {
-                dir('docker') {
+                dir('docker/apigw') {
                     // Export APIGW_VERSION so docker compose knows to use the newly built image.
                     // Because the image tag changes, 'up -d' will automatically detect the change,
                     // stop the old container, and start the new one without needing 'down'.
