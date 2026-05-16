@@ -4,3 +4,5 @@
     - add csrf filtering
     - potentially shift yaml config to filters
 4. logback config, reverse-proxy issue resolved, jenkins-slave with maven, cleanup hardcoded secrets
+5. pipeline based deployment using multibranch pipeline
+6. postgres

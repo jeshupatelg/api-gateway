@@ -91,3 +91,18 @@ This will:
 - Build the image from the root project context.
 - Expose gateway on port `8080`.
 - Mount `docker/routes.yaml` to `/config/routes.yaml` in the container.
+
+## Volumes
+
+The following Docker volumes and host mounts are used across the Compose files:
+
+**Named Volumes:**
+- `postgres_data` (postgres-compose.yaml): Persistent storage for PostgreSQL database.
+- `keycloak_home` (keycloak-compose.yaml): Persistent storage for Keycloak data.
+- `jenkins_home` (jenkins-compose.yaml): Persistent storage for Jenkins CI/CD data and configuration.
+
+**Host Bind Mounts:**
+- `./routes.yaml:/config/routes.yaml:ro` (apigw-compose.yaml): API Gateway routing rules.
+- `./security.yaml:/config/security.yaml:ro` (apigw-compose.yaml): API Gateway security config.
+- `./logback.xml:/config/logback.xml:ro` (apigw-compose.yaml): API Gateway logging configuration.
+- `/var/run/docker.sock:/var/run/docker.sock` (jenkins-compose.yaml): Allows Jenkins to run Docker commands on the host.

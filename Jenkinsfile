@@ -25,11 +25,11 @@ pipeline {
                 // Fetch the .env file from Jenkins secret file credentials.
                 // Replace 'api-gateway-env-secret' with your actual Secret File credential ID.
                 withCredentials([file(credentialsId: 'apigw-env', variable: 'SECRET_ENV_FILE')]) {
-                    // Copy to docker directory for docker-compose during deployment
-                    sh 'cp $SECRET_ENV_FILE docker/.env'
-                    
-                    // Also copy to root directory in case Maven tests need these env vars to load the Spring context successfully
                     sh 'cp $SECRET_ENV_FILE .env'
+                    sh 'cp $SECRET_ENV_FILE docker/postgres/.env'
+                    sh 'cp $SECRET_ENV_FILE docker/keycloak/.env'
+                    sh 'cp $SECRET_ENV_FILE docker/jenkins/.env'
+                    sh 'cp $SECRET_ENV_FILE docker/apigw/.env'
                 }
             }
         }
@@ -38,7 +38,7 @@ pipeline {
             steps {
                 // Assuming Maven is installed in the agent or available in PATH.
                 // Note: Change 'sh' to 'bat' if running on a Windows Jenkins agent.
-                sh 'mvn clean install'
+                sh 'mvn -B clean install'
             }
         }
 
@@ -48,7 +48,7 @@ pipeline {
                     def fullImageName = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
                     
                     // Build the Docker image
-                    sh "docker build -t ${fullImageName} -f docker/Dockerfile ."
+                    sh "docker build -t ${fullImageName} -f docker/apigw/Dockerfile ."
                     
                     // Push the Docker image
                     // Replace 'dockerhub-creds' with your actual Jenkins Username/Password credential ID for Docker Hub
@@ -63,12 +63,20 @@ pipeline {
 
         stage('Deploy network') {
             steps {
-                dir('docker') {
+                dir('docker/network') {
                     // Run the network sh script
                     sh 'bash network-compose.sh'
                 }
             }
         }
+
+        // stage('Deploy postgres') {
+        //     steps {
+        //         dir('docker/postgres') {
+        //             sh 'docker compose up -d'
+        //         }
+        //     }
+        // }
 
         stage('Deploy api-gateway') {
             steps {
@@ -76,23 +84,23 @@ pipeline {
                     // Export APIGW_VERSION so docker compose knows to use the newly built image.
                     // Because the image tag changes, 'up -d' will automatically detect the change,
                     // stop the old container, and start the new one without needing 'down'.
-                    sh "APIGW_VERSION=${IMAGE_TAG} docker compose -f apigw-compose.yaml up -d"
+                    sh "APIGW_VERSION=${IMAGE_TAG} docker compose up -d"
                 }
             }
         }
 
         stage('Deploy keycloak') {
             steps {
-                dir('docker') {
-                    sh 'docker compose -f keycloak-compose.yaml up -d'
+                dir('docker/keycloak') {
+                    sh 'docker compose up -d'
                 }
             }
         }
 
         stage('Deploy jenkins') {
             steps {
-                dir('docker') {
-                    sh 'docker compose -f jenkins-compose.yaml up -d'
+                dir('docker/jenkins') {
+                    sh 'docker compose up -d'
                 }
             }
         }

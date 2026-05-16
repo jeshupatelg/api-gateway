@@ -15,9 +15,18 @@ services:
       KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
     volumes:
-      - ./routes.yaml:/config/routes.yaml:ro
-      - ./security.yaml:/config/security.yaml:ro
-      - ./logback.xml:/config/logback.xml:ro
+      - type: bind
+        source: ./routes.yaml
+        target: /config/routes.yaml
+        read_only: true
+      - type: bind
+        source: ./security.yaml
+        target: /config/security.yaml
+        read_only: true
+      - type: bind
+        source: ./logback.xml
+        target: /config/logback.xml
+        read_only: true
     networks:
       - gateway_net
     restart: unless-stopped
