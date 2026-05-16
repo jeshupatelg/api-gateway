@@ -3,14 +3,14 @@ spring:
     gateway:
       routes:
         - id: jenkins-service
-          uri: ${JENKINS_INTERNAL_URL:-http://jenkins:8080}
+          uri: ${JENKINS_INTERNAL_URL:http://jenkins:8080}
           order: 1
           predicates:
             - Path=/jenkins/**
           filters:
             - PreserveHostHeader
         - id: keycloak-service
-          uri: ${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080}
+          uri: ${KEYCLOAK_INTERNAL_URL:http://keycloak:8080}
           order: 0
           predicates:
             - Path=/keycloak/**
