@@ -1,6 +1,6 @@
 services:
   api-gateway:
-    image: jeshupatelg/apigw-homeserver:${APIGW_VERSION:-ed15}
+    image: jeshupatelg/apigw-homeserver:${APIGW_VERSION}
     container_name: api-gateway
     # entrypoint: ["java", "-Dlogging.config=/config/logback.xml", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/opt/api-gateway/app.jar"]
     ports:

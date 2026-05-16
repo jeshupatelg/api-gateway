@@ -1,6 +1,6 @@
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    image: jenkins/jenkins:${JENKINS_VERSION}
     user: "${JENKINS_UID}:${JENKINS_GID}"   #jenkins-docker:docker user:grp on host
     container_name: jenkins
     command: >
