@@ -81,11 +81,7 @@ pipeline {
         stage('Deploy api-gateway') {
             steps {
                 dir('docker/apigw') {
-                    // Cleanup potential Docker-created directories from previous failed mounts
-                    sh 'if [ -d logback.xml ]; then rm -rf logback.xml; fi'
-                    sh 'if [ -d routes.yaml ]; then rm -rf routes.yaml; fi'
-                    sh 'if [ -d security.yaml ]; then rm -rf security.yaml; fi'
-                    
+                    // Configuration files are now baked into the image in the 'Build api-gateway image' stage.
                     // Export APIGW_VERSION so docker compose knows to use the newly built image.
                     sh "APIGW_VERSION=${IMAGE_TAG} docker compose up -d --force-recreate"
                 }

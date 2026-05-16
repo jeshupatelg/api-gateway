@@ -14,19 +14,21 @@ services:
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
       KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
-    volumes:
-      - type: bind
-        source: ./routes.yaml
-        target: /config/routes.yaml
-        read_only: true
-      - type: bind
-        source: ./security.yaml
-        target: /config/security.yaml
-        read_only: true
-      - type: bind
-        source: ./logback.xml
-        target: /config/logback.xml
-        read_only: true
+    # Configuration files are baked into the image in Dockerfile for CI/CD portability.
+    # To override them at runtime, uncomment the volumes section below.
+    # volumes:
+    #   - type: bind
+    #     source: ./routes.yaml
+    #     target: /config/routes.yaml
+    #     read_only: true
+    #   - type: bind
+    #     source: ./security.yaml
+    #     target: /config/security.yaml
+    #     read_only: true
+    #   - type: bind
+    #     source: ./logback.xml
+    #     target: /config/logback.xml
+    #     read_only: true
     networks:
       - gateway_net
     restart: unless-stopped
