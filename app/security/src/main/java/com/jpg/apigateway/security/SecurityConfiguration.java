@@ -8,10 +8,10 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 
 /**
- * Reactive security for Spring Cloud Gateway: OAuth2/OIDC login with Keycloak and path-based
+ * Reactive security for Spring Cloud Gateway: OAuth2/OIDC login with Keycloak
+ * and path-based
  * authorization driven by {@link GatewaySecurityProperties}.
  */
 @Configuration
@@ -19,38 +19,32 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 @EnableConfigurationProperties(GatewaySecurityProperties.class)
 public class SecurityConfiguration {
 
-    /**
-     * Configures public routes, delegates protected routes to {@link RolePathReactiveAuthorizationManager},
-     * and enables OAuth2 login with the default Keycloak {@link org.springframework.security.oauth2.client.registration.ClientRegistration}
-     * named {@code keycloak}.
-     *
-     * @param http server security DSL
-     * @param gatewaySecurityProperties public paths and role-to-path rules
-     * @param rolePathReactiveAuthorizationManager grants access when the request path matches a pattern for any of the user roles
-     * @return the gateway security filter chain
-     */
-    @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(
-            ServerHttpSecurity http,
-            GatewaySecurityProperties gatewaySecurityProperties,
-            RolePathReactiveAuthorizationManager rolePathReactiveAuthorizationManager) {
-        String[] publicPaths = gatewaySecurityProperties.getPublicPaths().toArray(String[]::new);
-        http.authorizeExchange(exchanges -> exchanges
-                .pathMatchers(publicPaths).permitAll()
-                .anyExchange().access(rolePathReactiveAuthorizationManager));
-        http.oauth2Login(Customizer.withDefaults());
-//        http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(exchange -> {
-//            String path = exchange.getRequest().getPath().value();
-//            if (path.startsWith("/login/oauth2/code/")) {
-//                return ServerWebExchangeMatcher.MatchResult.notMatch();
-//            }
-//            String method = exchange.getRequest().getMethod().name();
-//            if ("GET".equals(method) || "HEAD".equals(method) || "TRACE".equals(method) || "OPTIONS".equals(method)) {
-//                return ServerWebExchangeMatcher.MatchResult.notMatch();
-//            }
-//            return ServerWebExchangeMatcher.MatchResult.match();
-//        }));
-        http.csrf(ServerHttpSecurity.CsrfSpec::disable);
-        return http.build();
-    }
+        /**
+         * Configures public routes, delegates protected routes to
+         * {@link RolePathReactiveAuthorizationManager},
+         * and enables OAuth2 login with the default Keycloak
+         * {@link org.springframework.security.oauth2.client.registration.ClientRegistration}
+         * named {@code keycloak}.
+         *
+         * @param http                                 server security DSL
+         * @param gatewaySecurityProperties            public paths and role-to-path
+         *                                             rules
+         * @param rolePathReactiveAuthorizationManager grants access when the request
+         *                                             path matches a pattern for any of
+         *                                             the user roles
+         * @return the gateway security filter chain
+         */
+        @Bean
+        public SecurityWebFilterChain springSecurityFilterChain(
+                        ServerHttpSecurity http,
+                        GatewaySecurityProperties gatewaySecurityProperties,
+                        RolePathReactiveAuthorizationManager rolePathReactiveAuthorizationManager) {
+                String[] publicPaths = gatewaySecurityProperties.getPublicPaths().toArray(String[]::new);
+                http.authorizeExchange(exchanges -> exchanges
+                                .pathMatchers(publicPaths).permitAll()
+                                .anyExchange().access(rolePathReactiveAuthorizationManager));
+                http.oauth2Login(Customizer.withDefaults());
+                http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+                return http.build();
+        }
 }

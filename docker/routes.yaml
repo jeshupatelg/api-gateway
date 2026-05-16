@@ -2,11 +2,11 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: nginx-service
-          uri: http://192.168.29.96:8080
-          order: 100
-          predicates:
-            - Path=/**
+        # - id: nginx-service
+        #   uri: http://192.168.29.96:8080
+        #   order: 100
+        #   predicates:
+        #     - Path=/**
         - id: jenkins-service
           uri: http://jenkins:8080
           order: 1

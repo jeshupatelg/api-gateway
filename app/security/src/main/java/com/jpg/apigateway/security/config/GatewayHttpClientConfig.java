@@ -5,8 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.web.server.firewall.ServerWebExchangeFirewall;
 import org.springframework.security.web.server.firewall.StrictServerWebExchangeFirewall;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.util.List;
@@ -51,20 +49,17 @@ public class GatewayHttpClientConfig {
         relaxedFirewall.setAllowUrlEncodedPercent(true);
 
         // 3. Return a delegating firewall that chooses between them
-        return new ServerWebExchangeFirewall() {
-            @Override
-            public Mono<ServerWebExchange> getFirewalledExchange(ServerWebExchange exchange) {
-                String rawPath = exchange.getRequest().getURI().getRawPath();
+        return exchange -> {
+            String rawPath = exchange.getRequest().getURI().getRawPath();
 
-                // If the path starts with our target pattern, use the relaxed rules
-                // Otherwise, enforce strict security rules
-                boolean useRelaxed = rawPath != null && 
-                                     relaxedPatterns != null && 
-                                     relaxedPatterns.stream().filter(p -> !p.isEmpty()).anyMatch(rawPath::startsWith);
+            // If the path starts with our target pattern, use the relaxed rules
+            // Otherwise, enforce strict security rules
+            boolean useRelaxed = rawPath != null &&
+                                 relaxedPatterns != null &&
+                                 relaxedPatterns.stream().filter(p -> !p.isEmpty()).anyMatch(rawPath::startsWith);
 
-                return useRelaxed ? relaxedFirewall.getFirewalledExchange(exchange) 
-                                  : strictFirewall.getFirewalledExchange(exchange);
-            }
+            return useRelaxed ? relaxedFirewall.getFirewalledExchange(exchange)
+                              : strictFirewall.getFirewalledExchange(exchange);
         };
     }
 

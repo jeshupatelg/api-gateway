@@ -6,7 +6,7 @@ services:
     command: >
       bash -c "java -jar /usr/share/jenkins/jenkins.war --prefix=/jenkins"
     ports:
-      #- "8083:8080"   # host access
+      - "8083:8080"   # host access open for github webhooks
       - "50000:50000" # agent connections
     volumes:
       - jenkins_home:/var/jenkins_home

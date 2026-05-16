@@ -5,8 +5,8 @@ services:
     command: start-dev
     environment:
       # bootstrap admin (new variables)
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin #disabled user
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin #disabled password
 
       # public address Keycloak should use to build links (includes the /keycloak path)
       KC_HOSTNAME: "https://apigw.homedesk.dpdns.org/keycloak"

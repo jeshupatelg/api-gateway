@@ -26,7 +26,6 @@
     <modules>
         <module>app</module>
         <module>docker</module>
-        <module>helm</module>
     </modules>
 
     <dependencyManagement>

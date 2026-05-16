@@ -12,7 +12,6 @@ services:
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apigw-client}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-gP3EbDBhHOF11rEOZ19JTtIZ1fvBwlbE}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-https://apigw.homedesk.dpdns.org/keycloak/realms/homeserver}
-    ##keycloak:8080/realms/homeserver}
     volumes:
       - ./routes.yaml:/config/routes.yaml:ro
       - ./security.yaml:/config/security.yaml:ro
