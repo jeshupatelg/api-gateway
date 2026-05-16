@@ -4,7 +4,7 @@ pipeline {
     environment {
         // You can define default environment variables here or in Jenkins global properties
         // CREDENTIAL_NAME = env.CREDENTIAL_NAME ?: 'my-git-credentials-id'
-        DOCKER_REGISTRY = env.DOCKER_REGISTRY ?: 'jeshupatelg'
+        DOCKER_REGISTRY = 'jeshupatelg'
         IMAGE_NAME = 'apigw-homeserver'
         IMAGE_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
     }
