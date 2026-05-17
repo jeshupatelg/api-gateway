@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:${POSTGRES_VERSION}
-    container_name: postgres
+    container_name: homeserver-pg
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
