@@ -1,14 +1,8 @@
-include:
-  - path: ../postgres/docker-compose.yaml
-
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
     container_name: keycloak
     command: start-dev
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       # bootstrap admin (new variables)
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER} #disabled user
