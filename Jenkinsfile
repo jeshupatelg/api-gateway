@@ -70,20 +70,43 @@ pipeline {
             }
         }
 
-        // stage('Deploy postgres') {
-        //     steps {
-        //         dir('docker/postgres') {
-        //             sh 'docker compose up -d'
-        //         }
-        //     }
-        // }
+        stage('Deploy postgres') {
+            steps {
+                dir('docker/postgres') {
+                    sh 'docker compose up -d'
+                    sh '''
+                        # Sourcing .env file to get POSTGRES_USER
+                        if [ -f .env ]; then
+                            export $(cat .env | grep -v '^#' | xargs)
+                        fi
+                        
+                        DB_USER="${POSTGRES_USER}"
+                        echo "Waiting for PostgreSQL to be ready on homeserver-pg (timeout 60s)..."
+                        TIMEOUT=60
+                        COUNTER=0
+                        until docker exec homeserver-pg pg_isready -U "$DB_USER" >/dev/null 2>&1; do
+                            if [ $COUNTER -ge $TIMEOUT ]; then
+                                echo "ERROR: Timeout of ${TIMEOUT}s reached waiting for PostgreSQL to start!"
+                                exit 1
+                            fi
+                            sleep 2
+                            COUNTER=$((COUNTER + 2))
+                        done
+                        echo "PostgreSQL is ready!"
+                        
+                        # Execute SQL initialization scripts
+                        bash scripts/run-sql.sh
+                    '''
+                }
+            }
+        }
 
         stage('Deploy api-gateway') {
             steps {
                 dir('docker/apigw') {
                     // Configuration files are now baked into the image in the 'Build api-gateway image' stage.
                     // Export APIGW_VERSION so docker compose knows to use the newly built image.
-                    sh "APIGW_VERSION=${IMAGE_TAG} docker compose up -d --force-recreate"
+                    sh "APIGW_VERSION=${IMAGE_TAG} docker compose up -d"
                 }
             }
         }

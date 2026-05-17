@@ -98,7 +98,6 @@ The following Docker volumes and host mounts are used across the Compose files:
 
 **Named Volumes:**
 - `postgres_data` (postgres-compose.yaml): Persistent storage for PostgreSQL database.
-- `keycloak_home` (keycloak-compose.yaml): Persistent storage for Keycloak data.
 - `jenkins_home` (jenkins-compose.yaml): Persistent storage for Jenkins CI/CD data and configuration.
 
 **Host Bind Mounts:**
