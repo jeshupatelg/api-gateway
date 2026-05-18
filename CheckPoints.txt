@@ -2,7 +2,8 @@
 2. jenkins deployed
 3. keycloak deployed and integrated at apigw
     - add CSRF filtering
-    - potentially shift YAML config to filters
+    - potentially shift YAML config to spring filters
 4. logback config, reverse-proxy issue resolved, jenkins-slave with maven, cleanup hardcoded secrets
 5. pipeline based deployment using multi-branch pipeline
-6. postgres deployment through jenkins, keycloak migration to postgres
+6. postgres deployment through jenkins, keycloak migration to postgres, health checks
+7. conditional build/image deploy
