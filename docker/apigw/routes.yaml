@@ -21,3 +21,11 @@ spring:
             - PreserveHostHeader
             - AddRequestHeader=X-Forwarded-Proto,https
             - AddRequestHeader=X-Forwarded-Port,443
+        - id: app-service
+          uri: http://${K8S_APPLICATION_SERVER_HOST}:${K8S_APPLICATION_SERVER_PORT}
+          order: 2
+          predicates:
+            - Path=/app/**
+          filters:
+            - StripPrefix=1
+            - PreserveHostHeader
