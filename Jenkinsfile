@@ -35,6 +35,13 @@ pipeline {
         }
 
         stage('Build api-gateway') {
+            when {
+                anyOf {
+                    changeset "app/**"
+                    changeset "pom.xml"
+                    changeset "docker/apigw/**"
+                }
+            }
             steps {
                 // Assuming Maven is installed in the agent or available in PATH.
                 // Note: Change 'sh' to 'bat' if running on a Windows Jenkins agent.
@@ -43,6 +50,13 @@ pipeline {
         }
 
         stage('Build api-gateway image') {
+            when {
+                anyOf {
+                    changeset "app/**"
+                    changeset "pom.xml"
+                    changeset "docker/apigw/**"
+                }
+            }
             steps {
                 script {
                     def fullImageName = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -75,10 +89,13 @@ pipeline {
                 dir('docker/postgres') {
                     sh 'docker compose up -d'
                     sh '''
-                        # Sourcing .env file to get POSTGRES_USER
+                        # Disable command tracing to prevent printing secrets
+                        set +x
                         if [ -f .env ]; then
                             export $(cat .env | grep -v '^#' | xargs)
                         fi
+                        # Re-enable command tracing
+                        set -x
                         
                         DB_USER="${POSTGRES_USER}"
                         echo "Waiting for PostgreSQL to be ready on homeserver-pg (timeout 60s)..."
@@ -102,6 +119,13 @@ pipeline {
         }
 
         stage('Deploy api-gateway') {
+            when {
+                anyOf {
+                    changeset "app/**"
+                    changeset "pom.xml"
+                    changeset "docker/apigw/**"
+                }
+            }
             steps {
                 dir('docker/apigw') {
                     // Configuration files are now baked into the image in the 'Build api-gateway image' stage.
