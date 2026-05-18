@@ -27,5 +27,5 @@ spring:
           predicates:
             - Path=/app/**
           filters:
-            - StripPrefix=1
+            #- StripPrefix=1
             - PreserveHostHeader
