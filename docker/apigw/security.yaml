@@ -13,7 +13,7 @@ gateway:
       - /actuator/health
       - /actuator/info
       - /favicon.ico
-      ##- /jenkins/** #jenkins native integration with keycloak for rbac
+      #- /jenkins/** #jenkins native integration with keycloak for rbac
     role-path-access:
       admin:
         - /**
