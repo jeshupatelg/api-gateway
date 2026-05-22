@@ -8,6 +8,7 @@ spring:
           predicates:
             - Path=/jenkins/**
           filters:
+            - TokenRelay
             - PreserveHostHeader
         - id: keycloak-service
           uri: ${KEYCLOAK_INTERNAL_URL:http://keycloak:8080}
@@ -27,5 +28,6 @@ spring:
           predicates:
             - Path=/app/**
           filters:
+            - TokenRelay
             #- StripPrefix=1
             - PreserveHostHeader
