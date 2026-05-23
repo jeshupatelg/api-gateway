@@ -20,15 +20,20 @@ services:
       - apigw_config:/config:ro
     networks:
       - gateway_net
+      - minikube
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || wget -q --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
     restart: unless-stopped
+    extra_hosts:
+      - "minikube:${K8S_APPLICATION_SERVER_HOST}"
 
 networks:
   gateway_net:
+    external: true
+  minikube:
     external: true
 
 volumes:
