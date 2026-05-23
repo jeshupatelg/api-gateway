@@ -16,21 +16,8 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       K8S_APPLICATION_SERVER_HOST: ${K8S_APPLICATION_SERVER_HOST}
       K8S_APPLICATION_SERVER_PORT: ${K8S_APPLICATION_SERVER_PORT}
-    # Configuration files are baked into the image in Dockerfile for CI/CD portability.
-    # To override them at runtime, uncomment the volumes section below.
-    # volumes:
-    #   - type: bind
-    #     source: ./routes.yaml
-    #     target: /config/routes.yaml
-    #     read_only: true
-    #   - type: bind
-    #     source: ./security.yaml
-    #     target: /config/security.yaml
-    #     read_only: true
-    #   - type: bind
-    #     source: ./logback.xml
-    #     target: /config/logback.xml
-    #     read_only: true
+    volumes:
+      - apigw_config:/config:ro
     networks:
       - gateway_net
     healthcheck:
@@ -42,4 +29,8 @@ services:
 
 networks:
   gateway_net:
+    external: true
+
+volumes:
+  apigw_config:
     external: true

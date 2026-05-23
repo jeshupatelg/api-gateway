@@ -7,10 +7,10 @@ spring:
     name: api-gateway
   config:
     import:
-      # Route predicates/targets (existing behaviour).
-      - optional:file:/config/routes.yaml
-      # Optional overrides for gateway.security.* (e.g. role → path mapping).
-      - optional:file:/config/security.yaml
+      # Route predicates/targets (MANDATORY - Fails boot if missing).
+      - file:/config/routes.yaml
+      # Overrides for gateway.security.* (MANDATORY - Fails boot if missing).
+      - file:/config/security.yaml
   security:
     oauth2:
       resourceserver:

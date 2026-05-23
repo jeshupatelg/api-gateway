@@ -8,11 +8,7 @@ RUN mkdir /config
 # Copy the application jar
 COPY app/common/target/api-gateway.jar app.jar
 
-# Bake configuration files into the image for portability
-# The build context is the project root (.), so paths are relative to root.
-COPY docker/apigw/routes.yaml /config/routes.yaml
-COPY docker/apigw/security.yaml /config/security.yaml
-COPY docker/apigw/logback.xml /config/logback.xml
+# The config files will be mounted at runtime from the host node.
 
 EXPOSE 8080
 

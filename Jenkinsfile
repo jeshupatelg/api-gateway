@@ -128,7 +128,7 @@ pipeline {
             }
             steps {
                 dir('docker/apigw') {
-                    // Configuration files are now baked into the image in the 'Build api-gateway image' stage.
+                    // Enforces that the pre-provisioned external 'apigw_config' volume is present on the host VM.
                     // Export APIGW_VERSION so docker compose knows to use the newly built image.
                     sh "APIGW_VERSION=${IMAGE_TAG} docker compose up -d"
                 }
