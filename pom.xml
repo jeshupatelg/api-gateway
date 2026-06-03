@@ -7,11 +7,11 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.8</version>
+        <version>3.4.3</version>
         <relativePath />
     </parent>
 
-    <groupId>com.example</groupId>
+    <groupId>com.jpg</groupId>
     <artifactId>api-gateway</artifactId>
     <packaging>pom</packaging>
     <version>0.0.1-SNAPSHOT</version>
@@ -26,7 +26,6 @@
     <modules>
         <module>app</module>
         <module>docker</module>
-        <module>helm</module>
     </modules>
 
     <dependencyManagement>

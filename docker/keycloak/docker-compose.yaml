@@ -1,0 +1,43 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    container_name: keycloak
+    command: start-dev
+    environment:
+      # bootstrap admin (new variables)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER} #disabled user
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD} #disabled password
+
+      # Database Configuration
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://homeserver-pg:5432/keycloak
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+
+      # public address Keycloak should use to build links (includes the /keycloak path)
+      KC_HOSTNAME: "${KEYCLOAK_HOSTNAME}"
+
+      # relax strict hostname checks so proxied requests are accepted
+      KC_HOSTNAME_STRICT: "false"
+
+      # ensure Keycloak uses X-Forwarded-* headers for redirects and absolute URLs
+      #PROXY_ADDRESS_FORWARDING: "true"
+      KC_PROXY_HEADERS: "xforwarded"
+
+      # enable hostname feature (if your Keycloak build requires explicit enabling)
+      # If docs mention hostname:v2, use "hostname:v2" instead of "hostname"
+      KC_FEATURES: "hostname:v2"
+      # optional: keep for compatibility, but KC_HOSTNAME is authoritative
+      # KEYCLOAK_FRONTEND_URL: "${KEYCLOAK_HOSTNAME}"
+    networks:
+      - gateway_net
+    #healthcheck:
+      #test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || wget -q --spider http://localhost:8080/health/live || exit 1"]
+     # interval: 10s
+      #timeout: 5s
+      #retries: 3
+    restart: unless-stopped
+
+networks:
+  gateway_net:
+    external: true

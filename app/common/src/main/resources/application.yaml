@@ -1,14 +1,45 @@
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: api-gateway
   config:
-    # Load route rules from mounted file when present.
-    import: optional:file:/config/routes.yaml
+    import:
+      # Route predicates/targets (MANDATORY - Fails boot if missing).
+      - file:/config/routes.yaml
+      # Overrides for gateway.security.* (MANDATORY - Fails boot if missing).
+      - file:/config/security.yaml
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${KEYCLOAK_CLIENT_ID:apigw-client}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            authorization-uri: ${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/auth
+            token-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+            jwk-set-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+            user-info-uri: ${KEYCLOAK_INTERNAL_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/userinfo
+            user-name-attribute: preferred_username
   cloud:
     gateway:
+      forwarded:
+        enabled: false
       default-filters:
         # Uniformly request origin-keying for all pages
         - AddResponseHeader=Origin-Agent-Cluster, ?1
@@ -20,13 +51,25 @@ spring:
       httpserver:
         wiretap: true
 
+# Authorization after Keycloak login: realm roles → allowed URL patterns (Ant-style).
+# This does not define upstream routes; keep route predicates in routes.yaml aligned with these paths.
+gateway:
+  security:
+    role-path-access:
+      admin:
+        - /**
+      devops:
+        - /jenkins
+        - /jenkins/**
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
-logging:
-  level:
-    org.springframework.cloud.gateway: TRACE
-    reactor.netty: DEBUG
+api-gateway:
+  firewall:
+    relaxed-patterns: "/jenkins/administrativeMonitor/hudson.diagnosis.ReverseProxySetupMonitor/testForReverseProxySetup/"
+  exchange:
+    logging:
+      enabled: false

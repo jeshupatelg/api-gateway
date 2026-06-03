@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.jpg</groupId>
         <artifactId>api-gateway</artifactId>
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
@@ -14,5 +14,6 @@
     <artifactId>docker</artifactId>
     <name>docker</name>
     <description>docker module</description>
+    <packaging>pom</packaging>
 
 </project>

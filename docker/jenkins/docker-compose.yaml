@@ -1,12 +1,12 @@
 services:
   jenkins:
-    image: jenkins/jenkins:lts
-    user: "1002:983"   #jenkins-docker user on host
+    image: jenkins/jenkins:${JENKINS_VERSION}
+    user: "${JENKINS_UID}:${JENKINS_GID}"   #jenkins-docker:docker user:grp on host
     container_name: jenkins
     command: >
       bash -c "java -jar /usr/share/jenkins/jenkins.war --prefix=/jenkins"
     ports:
-      - "8083:8080"   # host access
+      - "${JENKINS_HOST_PORT}:8080"   # host access open for github webhooks
       - "50000:50000" # agent connections
     volumes:
       - jenkins_home:/var/jenkins_home
@@ -14,6 +14,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - gateway_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/jenkins/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:

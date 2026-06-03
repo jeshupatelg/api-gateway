@@ -1,0 +1,41 @@
+services:
+  api-gateway:
+    image: jeshupatelg/apigw-homeserver:${APIGW_VERSION}
+    container_name: api-gateway
+    # entrypoint: ["java", "-Dlogging.config=/config/logback.xml", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/opt/api-gateway/app.jar"]
+    ports:
+      - "${GATEWAY_HOST_IP}:${GATEWAY_HOST_PORT}:8080"   # expose gateway externally
+    #   - "5005:5005"                 # expose JVM debug port
+    environment:
+      # Same vars as app/common/src/main/resources/application.yaml; override via shell or .env beside this file.
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apigw-client}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      K8S_APPLICATION_SERVER_HOST: ${K8S_APPLICATION_SERVER_HOST}
+      K8S_APPLICATION_SERVER_PORT: ${K8S_APPLICATION_SERVER_PORT}
+    volumes:
+      - apigw_config:/config:ro
+    networks:
+      - gateway_net
+      - minikube
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    extra_hosts:
+      - "minikube:${K8S_APPLICATION_SERVER_HOST}"
+
+networks:
+  gateway_net:
+    external: true
+  minikube:
+    external: true
+
+volumes:
+  apigw_config:
+    external: true
