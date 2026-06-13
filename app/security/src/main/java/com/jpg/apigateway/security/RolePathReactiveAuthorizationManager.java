@@ -1,6 +1,9 @@
 package com.jpg.apigateway.security;
 
 import com.jpg.apigateway.security.config.GatewaySecurityProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.core.Authentication;
@@ -22,6 +25,8 @@ import java.util.Map;
  */
 @Component
 public class RolePathReactiveAuthorizationManager implements ReactiveAuthorizationManager<AuthorizationContext> {
+
+    private static final Logger log = LoggerFactory.getLogger(RolePathReactiveAuthorizationManager.class);
 
     private final GatewaySecurityProperties properties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -58,6 +63,7 @@ public class RolePathReactiveAuthorizationManager implements ReactiveAuthorizati
     private boolean isAuthorized(Authentication auth, String path) {
         Map<String, List<String>> rolePaths = properties.getRolePathAccess();
         if (rolePaths == null || rolePaths.isEmpty()) {
+            log.warn("Access denied: No role-path configurations defined in GatewaySecurityProperties.");
             return false;
         }
         for (Map.Entry<String, List<String>> entry : rolePaths.entrySet()) {
@@ -74,6 +80,10 @@ public class RolePathReactiveAuthorizationManager implements ReactiveAuthorizati
                     return true;
                 }
             }
+        }
+        if (!(auth instanceof AnonymousAuthenticationToken)) {
+            log.warn("Access denied for user '{}' (roles: {}): No matched pattern for path '{}'",
+                    auth.getName(), auth.getAuthorities(), path);
         }
         return false;
     }
