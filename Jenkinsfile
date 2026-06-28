@@ -26,9 +26,6 @@ pipeline {
                 // Replace 'api-gateway-env-secret' with your actual Secret File credential ID.
                 withCredentials([file(credentialsId: 'apigw-env', variable: 'SECRET_ENV_FILE')]) {
                     sh 'cp $SECRET_ENV_FILE .env'
-                    sh 'cp $SECRET_ENV_FILE docker/postgres/.env'
-                    sh 'cp $SECRET_ENV_FILE docker/keycloak/.env'
-                    sh 'cp $SECRET_ENV_FILE docker/jenkins/.env'
                     sh 'cp $SECRET_ENV_FILE docker/apigw/.env'
                 }
             }
@@ -75,48 +72,7 @@ pipeline {
             }
         }
 
-        stage('Deploy network') {
-            steps {
-                dir('docker/network') {
-                    // Run the network sh script
-                    sh 'bash network-compose.sh'
-                }
-            }
-        }
 
-        stage('Deploy postgres') {
-            steps {
-                dir('docker/postgres') {
-                    sh 'docker compose up -d'
-                    sh '''
-                        # Disable command tracing to prevent printing secrets
-                        set +x
-                        if [ -f .env ]; then
-                            export $(cat .env | grep -v '^#' | xargs)
-                        fi
-                        # Re-enable command tracing
-                        set -x
-                        
-                        DB_USER="${POSTGRES_USER}"
-                        echo "Waiting for PostgreSQL to be ready on homeserver-pg (timeout 60s)..."
-                        TIMEOUT=60
-                        COUNTER=0
-                        until docker exec homeserver-pg pg_isready -U "$DB_USER" >/dev/null 2>&1; do
-                            if [ $COUNTER -ge $TIMEOUT ]; then
-                                echo "ERROR: Timeout of ${TIMEOUT}s reached waiting for PostgreSQL to start!"
-                                exit 1
-                            fi
-                            sleep 2
-                            COUNTER=$((COUNTER + 2))
-                        done
-                        echo "PostgreSQL is ready!"
-                        
-                        # Execute SQL initialization scripts
-                        bash scripts/run-sql.sh
-                    '''
-                }
-            }
-        }
 
         stage('Deploy api-gateway') {
             when {
@@ -135,20 +91,6 @@ pipeline {
             }
         }
 
-        stage('Deploy keycloak') {
-            steps {
-                dir('docker/keycloak') {
-                    sh 'docker compose up -d'
-                }
-            }
-        }
 
-        stage('Deploy jenkins') {
-            steps {
-                dir('docker/jenkins') {
-                    sh 'docker compose up -d'
-                }
-            }
-        }
     }
 }
