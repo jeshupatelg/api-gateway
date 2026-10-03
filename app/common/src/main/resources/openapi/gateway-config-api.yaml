@@ -1,0 +1,324 @@
+openapi: 3.0.3
+info:
+  title: API Gateway Management Console API
+  description: Dynamic management endpoints for API Gateway routes, security rules, and YAML/JSON configuration import/export.
+  version: 1.0.0
+tags:
+  - name: Route Management
+    description: CRUD operations for Spring Cloud Gateway route definitions
+  - name: Security Management
+    description: Operations for public paths and role-path authorization rules
+  - name: Config Import Export
+    description: Import and export gateway configuration in YAML or JSON format
+
+paths:
+  /api/v1/config/routes:
+    get:
+      tags:
+        - Route Management
+      summary: List all gateway routes
+      operationId: getRoutes
+      responses:
+        '200':
+          description: List of gateway route definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RouteDefinitionDto'
+    post:
+      tags:
+        - Route Management
+      summary: Add or update a gateway route
+      operationId: saveRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDefinitionDto'
+      responses:
+        '200':
+          description: Route saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDefinitionDto'
+
+  /api/v1/config/routes/{id}:
+    delete:
+      tags:
+        - Route Management
+      summary: Delete a route by ID
+      operationId: deleteRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Route deleted successfully
+        '404':
+          description: Route not found
+
+  /api/v1/config/routes/{id}/enable:
+    put:
+      tags:
+        - Route Management
+      summary: Enable a route by ID
+      operationId: enableRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route enabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDefinitionDto'
+        '404':
+          description: Route not found
+
+  /api/v1/config/routes/{id}/disable:
+    put:
+      tags:
+        - Route Management
+      summary: Disable a route by ID
+      operationId: disableRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route disabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDefinitionDto'
+        '404':
+          description: Route not found
+
+  /api/v1/config/security:
+    get:
+      tags:
+        - Security Management
+      summary: Get full security configuration
+      operationId: getSecurityConfig
+      responses:
+        '200':
+          description: Security configuration rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewaySecurityConfigDto'
+
+  /api/v1/config/security/public-paths:
+    put:
+      tags:
+        - Security Management
+      summary: Update public path patterns
+      operationId: updatePublicPaths
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        '200':
+          description: Public paths updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/v1/config/security/role-path-access:
+    put:
+      tags:
+        - Security Management
+      summary: Update role-to-path access mappings
+      operationId: updateRolePathAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+      responses:
+        '200':
+          description: Role-path access mappings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+  /api/v1/config/export:
+    get:
+      tags:
+        - Config Import Export
+      summary: Export configuration in YAML or JSON format
+      operationId: exportConfig
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [yaml, json]
+            default: yaml
+      responses:
+        '200':
+          description: Exported configuration payload
+          content:
+            text/yaml:
+              schema:
+                $ref: '#/components/schemas/GatewayConfigExportDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayConfigExportDto'
+
+  /api/v1/config/import:
+    post:
+      tags:
+        - Config Import Export
+      summary: Import configuration from YAML or JSON payload
+      operationId: importConfig
+      parameters:
+        - name: mode
+          in: query
+          description: Import mode - override completely or merge with existing configuration
+          required: false
+          schema:
+            type: string
+            enum: [override, merge]
+            default: override
+        - name: format
+          in: query
+          description: Input format format - yaml or json
+          required: false
+          schema:
+            type: string
+            enum: [yaml, json]
+            default: yaml
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              $ref: '#/components/schemas/GatewayConfigExportDto'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayConfigExportDto'
+          application/x-yaml:
+            schema:
+              $ref: '#/components/schemas/GatewayConfigExportDto'
+      responses:
+        '200':
+          description: Configuration imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayConfigExportDto'
+            text/yaml:
+              schema:
+                $ref: '#/components/schemas/GatewayConfigExportDto'
+
+components:
+  schemas:
+    PredicateDefinitionDto:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        args:
+          type: object
+          additionalProperties:
+            type: string
+
+    FilterDefinitionDto:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        args:
+          type: object
+          additionalProperties:
+            type: string
+
+    RouteDefinitionDto:
+      type: object
+      required:
+        - id
+        - uri
+      properties:
+        id:
+          type: string
+        uri:
+          type: string
+        order:
+          type: integer
+          default: 0
+        enabled:
+          type: boolean
+          default: true
+        metadata:
+          type: object
+          additionalProperties: true
+        predicates:
+          type: array
+          items:
+            $ref: '#/components/schemas/PredicateDefinitionDto'
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterDefinitionDto'
+
+    GatewaySecurityConfigDto:
+      type: object
+      properties:
+        publicPaths:
+          type: array
+          items:
+            type: string
+        rolePathAccess:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    GatewayConfigExportDto:
+      type: object
+      properties:
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteDefinitionDto'
+        security:
+          $ref: '#/components/schemas/GatewaySecurityConfigDto'

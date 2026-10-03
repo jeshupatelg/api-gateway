@@ -1,16 +1,27 @@
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
+  reactive:
+    session:
+      # Keep Gateway WebSession Timeout and Keycloak SSO Session Idle aligned
+      timeout: ${GATEWAY_SESSION_TIMEOUT:30m}
 
 spring:
   application:
     name: api-gateway
-  config:
-    import:
-      # Route predicates/targets (MANDATORY - Fails boot if missing).
-      - file:/config/routes.yaml
-      # Overrides for gateway.security.* (MANDATORY - Fails boot if missing).
-      - file:/config/security.yaml
+  r2dbc:
+    url: ${R2DBC_URL:r2dbc:postgresql://${APIGW_POSTGRES_HOST:localhost}:${APIGW_POSTGRES_PORT:5432}/${APIGW_POSTGRES_DB:apigateway}}
+    username: ${APIGW_POSTGRES_USER:postgres}
+    password: ${APIGW_POSTGRES_PASSWORD:postgres}
+    pool:
+      initial-size: ${R2DBC_POOL_INITIAL_SIZE:5}
+      max-size: ${R2DBC_POOL_MAX_SIZE:20}
+      max-idle-time: ${R2DBC_POOL_MAX_IDLE_TIME:30m}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    url: ${FLYWAY_URL:jdbc:postgresql://${APIGW_POSTGRES_HOST:localhost}:${APIGW_POSTGRES_PORT:5432}/${APIGW_POSTGRES_DB:apigateway}}
+    user: ${APIGW_POSTGRES_USER:postgres}
+    password: ${APIGW_POSTGRES_PASSWORD:postgres}
   security:
     oauth2:
       resourceserver:
@@ -46,21 +57,33 @@ spring:
       httpclient:
         connect-timeout: 10000
         response-timeout: 30s
-        #to see logs
         wiretap: true
       httpserver:
         wiretap: true
 
-# Authorization after Keycloak login: realm roles → allowed URL patterns (Ant-style).
-# This does not define upstream routes; keep route predicates in routes.yaml aligned with these paths.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    with-credentials: true
+    csrf:
+      enabled: false
+
+# Authorization default static fallback rules
 gateway:
   security:
+    public-paths:
+      - /keycloak/**
+      - /oauth2/**
+      - /login/oauth2/code/**
+      - /actuator/health
+      - /actuator/info
+      - /favicon.ico
     role-path-access:
       admin:
-        - /**
-      devops:
-        - /jenkins
-        - /jenkins/**
+        - /swagger-ui.html
+        - /swagger-ui/**
+        - /v3/api-docs/**
+        - /api/v1/config/**
 
 management:
   endpoints:

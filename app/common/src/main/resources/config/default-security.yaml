@@ -1,0 +1,17 @@
+# Default fallback security configuration stored in git.
+# On first boot with an empty database, this configuration is loaded into the DB.
+gateway:
+  security:
+    public-paths:
+      - /keycloak/**
+      - /oauth2/**
+      - /login/oauth2/code/**
+      - /actuator/health
+      - /actuator/info
+      - /favicon.ico
+    role-path-access:
+      admin:
+        - /swagger-ui.html
+        - /swagger-ui/**
+        - /v3/api-docs/**
+        - /api/v1/config/**

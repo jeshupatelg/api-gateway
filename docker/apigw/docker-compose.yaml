@@ -9,6 +9,7 @@ services:
     environment:
       # Same vars as app/common/src/main/resources/application.yaml; override via shell or .env beside this file.
       SERVER_PORT: ${SERVER_PORT:-8080}
+      GATEWAY_SESSION_TIMEOUT: ${GATEWAY_SESSION_TIMEOUT:-30m}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apigw-client}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
@@ -16,6 +17,13 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       K8S_APPLICATION_SERVER_HOST: ${K8S_APPLICATION_SERVER_HOST}
       K8S_APPLICATION_SERVER_PORT: ${K8S_APPLICATION_SERVER_PORT}
+      # PostgreSQL & Reactive R2DBC / Flyway Config
+      APIGW_POSTGRES_HOST: ${APIGW_POSTGRES_HOST:-postgres}
+      APIGW_POSTGRES_PORT: ${APIGW_POSTGRES_PORT:-5432}
+      APIGW_POSTGRES_DB: ${APIGW_POSTGRES_DB:-apigateway}
+      APIGW_POSTGRES_USER: ${APIGW_POSTGRES_USER:-postgres}
+      APIGW_POSTGRES_PASSWORD: ${APIGW_POSTGRES_PASSWORD}
+      FLYWAY_ENABLED: ${FLYWAY_ENABLED:-true}
     volumes:
       - apigw_config:/config:ro
     networks:

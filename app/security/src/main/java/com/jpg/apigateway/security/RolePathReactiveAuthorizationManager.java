@@ -1,6 +1,7 @@
 package com.jpg.apigateway.security;
 
 import com.jpg.apigateway.security.config.GatewaySecurityProperties;
+import com.jpg.apigateway.security.service.DynamicSecurityCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -18,24 +19,21 @@ import java.util.Map;
 
 /**
  * Authorizes authenticated requests by matching the request path against Ant patterns configured
- * per realm role in {@link GatewaySecurityProperties#getRolePathAccess()}.
- * <p>
- * Unauthenticated requests do not reach this manager for non-public paths; the OAuth2 login flow
- * runs first. If no role grants a matching pattern, access is denied.
+ * per realm role dynamically in {@link DynamicSecurityCacheService} (falling back to {@link GatewaySecurityProperties}).
  */
 @Component
 public class RolePathReactiveAuthorizationManager implements ReactiveAuthorizationManager<AuthorizationContext> {
 
     private static final Logger log = LoggerFactory.getLogger(RolePathReactiveAuthorizationManager.class);
 
-    private final GatewaySecurityProperties properties;
+    private final GatewaySecurityProperties staticProperties;
+    private final DynamicSecurityCacheService dynamicSecurityCacheService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    /**
-     * @param properties role names and allowed path patterns
-     */
-    public RolePathReactiveAuthorizationManager(GatewaySecurityProperties properties) {
-        this.properties = properties;
+    public RolePathReactiveAuthorizationManager(GatewaySecurityProperties staticProperties,
+                                               DynamicSecurityCacheService dynamicSecurityCacheService) {
+        this.staticProperties = staticProperties;
+        this.dynamicSecurityCacheService = dynamicSecurityCacheService;
     }
 
     /**
@@ -61,9 +59,12 @@ public class RolePathReactiveAuthorizationManager implements ReactiveAuthorizati
      * @return true if any configured role of the user matches the path
      */
     private boolean isAuthorized(Authentication auth, String path) {
-        Map<String, List<String>> rolePaths = properties.getRolePathAccess();
+        Map<String, List<String>> rolePaths = dynamicSecurityCacheService.getRolePathAccess();
         if (rolePaths == null || rolePaths.isEmpty()) {
-            log.warn("Access denied: No role-path configurations defined in GatewaySecurityProperties.");
+            rolePaths = staticProperties.getRolePathAccess();
+        }
+        if (rolePaths == null || rolePaths.isEmpty()) {
+            log.warn("Access denied: No role-path configurations defined.");
             return false;
         }
         for (Map.Entry<String, List<String>> entry : rolePaths.entrySet()) {

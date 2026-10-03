@@ -1,0 +1,6 @@
+# Default fallback route configuration stored in git.
+# On first boot with an empty database, this configuration is loaded into the DB.
+spring:
+  cloud:
+    gateway:
+      routes: []
