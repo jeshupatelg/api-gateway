@@ -82,6 +82,24 @@ public class DynamicSecurityRepositoryService {
     }
 
     /**
+     * Adds a single public path pattern and merges it with existing public paths.
+     *
+     * @param path the public path pattern to add
+     * @return Mono emitting the updated list of public paths
+     */
+    public Mono<List<String>> addPublicPath(String path) {
+        if (path == null || path.isBlank()) {
+            return Mono.just(getPublicPaths());
+        }
+        List<String> currentPaths = new ArrayList<>(getPublicPaths());
+        if (!currentPaths.contains(path)) {
+            currentPaths.add(path);
+            return updatePublicPaths(currentPaths);
+        }
+        return Mono.just(currentPaths);
+    }
+
+    /**
      * Replaces role-to-path mappings in database and updates in-memory cache.
      *
      * @param rolePathAccess map of role to path patterns

@@ -91,6 +91,29 @@ class SecurityManagementControllerTest {
     }
 
     /**
+     * Verifies addPublicPath delegates to service and returns updated flux of paths.
+     */
+    @Test
+    void testAddPublicPath() {
+        String newPath = "/api/v1/auth/**";
+        List<String> updatedPaths = List.of("/health", "/api/v1/auth/**");
+        when(dynamicSecurityRepositoryService.addPublicPath(newPath)).thenReturn(Mono.just(updatedPaths));
+
+        StepVerifier.create(controller.addPublicPath(Mono.just(newPath), exchange))
+                .assertNext(response -> {
+                    assertEquals(HttpStatus.OK, response.getStatusCode());
+                    Flux<String> bodyFlux = response.getBody();
+                    assertNotNull(bodyFlux);
+                    StepVerifier.create(bodyFlux)
+                            .expectNext("/health", "/api/v1/auth/**")
+                            .verifyComplete();
+                })
+                .verifyComplete();
+
+        verify(dynamicSecurityRepositoryService).addPublicPath(newPath);
+    }
+
+    /**
      * Verifies updateRolePathAccess delegates role-path mapping to service and returns updated map.
      */
     @Test

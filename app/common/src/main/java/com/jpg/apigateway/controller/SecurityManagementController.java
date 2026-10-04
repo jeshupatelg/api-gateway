@@ -46,6 +46,21 @@ public class SecurityManagementController implements SecurityManagementApi {
     }
 
     /**
+     * Adds a single public path pattern and merges it with existing public paths.
+     *
+     * @param body Mono containing the public path pattern string
+     * @param exchange current server web exchange
+     * @return Mono containing ResponseEntity with Flux of updated public paths
+     */
+    @Override
+    public Mono<ResponseEntity<Flux<String>>> addPublicPath(Mono<String> body, ServerWebExchange exchange) {
+        Flux<String> resultFlux = body
+                .flatMap(dynamicSecurityRepositoryService::addPublicPath)
+                .flatMapMany(Flux::fromIterable);
+        return Mono.just(ResponseEntity.ok(resultFlux));
+    }
+
+    /**
      * Replaces the public path rules in database and updates runtime security cache.
      *
      * @param requestBody Flux containing new public path patterns

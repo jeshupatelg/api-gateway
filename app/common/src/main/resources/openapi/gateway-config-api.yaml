@@ -123,6 +123,26 @@ paths:
                 $ref: '#/components/schemas/GatewaySecurityConfigDto'
 
   /api/v1/config/security/public-paths:
+    post:
+      tags:
+        - Security Management
+      summary: Add a public path pattern
+      operationId: addPublicPath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Public path added successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     put:
       tags:
         - Security Management

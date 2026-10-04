@@ -113,6 +113,55 @@ class DynamicSecurityRepositoryServiceTest {
     }
 
     /**
+     * Verifies addPublicPath merges a new path when it does not already exist.
+     */
+    @Test
+    void testAddPublicPath_WhenNewPath() {
+        when(dynamicSecurityCacheService.getPublicPaths()).thenReturn(List.of("/health"));
+        when(publicPathRepository.deleteAll()).thenReturn(Mono.empty());
+        when(publicPathRepository.saveAll(anyIterable())).thenAnswer(inv -> {
+            Iterable<SecurityPublicPathEntity> iterable = inv.getArgument(0);
+            return Flux.fromIterable(iterable);
+        });
+
+        StepVerifier.create(service.addPublicPath("/api/v1/auth/**"))
+                .expectNext(List.of("/health", "/api/v1/auth/**"))
+                .verifyComplete();
+
+        verify(publicPathRepository).deleteAll();
+        verify(dynamicSecurityCacheService).setPublicPaths(List.of("/health", "/api/v1/auth/**"));
+    }
+
+    /**
+     * Verifies addPublicPath returns existing paths without saving when path already exists.
+     */
+    @Test
+    void testAddPublicPath_WhenExistingPath() {
+        when(dynamicSecurityCacheService.getPublicPaths()).thenReturn(List.of("/health"));
+
+        StepVerifier.create(service.addPublicPath("/health"))
+                .expectNext(List.of("/health"))
+                .verifyComplete();
+
+        verify(publicPathRepository, never()).deleteAll();
+        verify(publicPathRepository, never()).saveAll(anyIterable());
+    }
+
+    /**
+     * Verifies addPublicPath returns current paths directly when path is null or blank.
+     */
+    @Test
+    void testAddPublicPath_WhenNullOrBlank() {
+        when(dynamicSecurityCacheService.getPublicPaths()).thenReturn(List.of("/health"));
+
+        StepVerifier.create(service.addPublicPath("   "))
+                .expectNext(List.of("/health"))
+                .verifyComplete();
+
+        verify(publicPathRepository, never()).deleteAll();
+    }
+
+    /**
      * Verifies updateRolePathAccess deletes old role mappings, saves new ones, and refreshes cache.
      */
     @Test
