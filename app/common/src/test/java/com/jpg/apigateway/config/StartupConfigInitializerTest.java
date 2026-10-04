@@ -119,6 +119,29 @@ class StartupConfigInitializerTest {
         assertEquals(org.springframework.core.Ordered.HIGHEST_PRECEDENCE, keycloakRoute.getOrder());
         assertEquals("Path", keycloakRoute.getPredicates().get(0).getName());
         assertEquals("/keycloak/**", keycloakRoute.getPredicates().get(0).getArgs().get("_genkey_0"));
+
+        assertEquals(6, keycloakRoute.getFilters().size());
+        assertEquals("AddResponseHeader", keycloakRoute.getFilters().get(0).getName());
+        assertEquals("Cache-Control", keycloakRoute.getFilters().get(0).getArgs().get("_genkey_0"));
+        assertEquals("no-store,no-cache,must-revalidate,max-age=0", keycloakRoute.getFilters().get(0).getArgs().get("_genkey_1"));
+
+        assertEquals("AddResponseHeader", keycloakRoute.getFilters().get(1).getName());
+        assertEquals("Pragma", keycloakRoute.getFilters().get(1).getArgs().get("_genkey_0"));
+        assertEquals("no-cache", keycloakRoute.getFilters().get(1).getArgs().get("_genkey_1"));
+
+        assertEquals("StripPrefix", keycloakRoute.getFilters().get(2).getName());
+        assertEquals("1", keycloakRoute.getFilters().get(2).getArgs().get("_genkey_0"));
+
+        assertEquals("PreserveHostHeader", keycloakRoute.getFilters().get(3).getName());
+
+        assertEquals("AddRequestHeader", keycloakRoute.getFilters().get(4).getName());
+        assertEquals("X-Forwarded-Proto", keycloakRoute.getFilters().get(4).getArgs().get("_genkey_0"));
+        assertEquals("https", keycloakRoute.getFilters().get(4).getArgs().get("_genkey_1"));
+
+        assertEquals("AddRequestHeader", keycloakRoute.getFilters().get(5).getName());
+        assertEquals("X-Forwarded-Port", keycloakRoute.getFilters().get(5).getArgs().get("_genkey_0"));
+        assertEquals("443", keycloakRoute.getFilters().get(5).getArgs().get("_genkey_1"));
+
         org.mockito.Mockito.verify(eventPublisher).publishEvent(org.mockito.ArgumentMatchers.any(org.springframework.cloud.gateway.event.RefreshRoutesEvent.class));
     }
 

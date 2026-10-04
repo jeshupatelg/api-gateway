@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
+import org.springframework.cloud.gateway.filter.FilterDefinition;
 import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.context.ApplicationEventPublisher;
@@ -370,13 +371,34 @@ public class StartupConfigInitializer implements ApplicationRunner {
 
         PredicateDefinition pathPredicate = new PredicateDefinition("Path=/keycloak/**");
         rd.setPredicates(List.of(pathPredicate));
-        rd.setFilters(new ArrayList<>());
+
+        List<FilterDefinition> filters = List.of(
+                createFilter("AddResponseHeader", "Cache-Control", "no-store,no-cache,must-revalidate,max-age=0"),
+                createFilter("AddResponseHeader", "Pragma", "no-cache"),
+                createFilter("StripPrefix", "1", null),
+                createFilter("PreserveHostHeader", null, null),
+                createFilter("AddRequestHeader", "X-Forwarded-Proto", "https"),
+                createFilter("AddRequestHeader", "X-Forwarded-Port", "443")
+        );
+        rd.setFilters(filters);
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put(GatewayRouteMapper.METADATA_ENABLED, true);
         rd.setMetadata(metadata);
 
         return rd;
+    }
+
+    private FilterDefinition createFilter(String name, String arg0, String arg1) {
+        FilterDefinition filter = new FilterDefinition();
+        filter.setName(name);
+        if (arg0 != null) {
+            filter.addArg("_genkey_0", arg0);
+        }
+        if (arg1 != null) {
+            filter.addArg("_genkey_1", arg1);
+        }
+        return filter;
     }
 
     private String getKeycloakInternalUrl() {
