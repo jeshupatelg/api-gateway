@@ -28,6 +28,7 @@ graph TD
     
     %% Routing Flow
     APIGW -->|Route /keycloak/**| Keycloak
+    
     APIGW -->|Route /jenkins/**| Jenkins
     APIGW -->|Route /app/** with TokenRelay| K8sIngress
     
