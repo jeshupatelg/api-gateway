@@ -28,7 +28,7 @@
           <div>
             <div class="font-bold text-base tracking-tight leading-tight flex items-center gap-2">
               Gateway Portal
-              <span id="envBadge" class="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Live</span>
+              <span class="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v1.0</span>
             </div>
             <div class="text-xs text-slate-400">Spring Cloud &bull; Keycloak Secured</div>
           </div>
@@ -52,21 +52,8 @@
         </nav>
       </div>
 
-      <!-- User Information & Simulator Controls -->
+      <!-- User Information & Actions -->
       <div class="flex items-center gap-3">
-        <!-- Optional Simulator selector (shown when offline or toggled) -->
-        <div id="simSelectorWrapper" class="relative hidden">
-          <select id="userSelector" onchange="simulateUser(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 pr-7 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer font-medium appearance-none">
-            <option value="userA">👤 Alice (devops)</option>
-            <option value="userB">👤 Bob (devops, reporting)</option>
-            <option value="admin">👑 Charlie (admin)</option>
-            <option value="guest">🌐 Dave (guest)</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-          </div>
-        </div>
-
         <!-- Swagger UI Link for Admins -->
         <a id="swaggerLink" href="/swagger-ui.html" target="_blank" class="hidden text-xs text-slate-400 hover:text-indigo-400 px-2.5 py-1 rounded bg-slate-800/60 border border-slate-700/60 transition">
           Swagger UI
@@ -109,8 +96,8 @@
         </svg>
       </div>
       <div class="flex-1">
-        <span class="font-semibold text-slate-100" id="bannerTitle">Role-Based Microservice Access:</span>
-        <span id="bannerText">Services below are dynamically synchronized and authorized against your Keycloak realm session.</span>
+        <span class="font-semibold text-slate-100">Role-Based Microservice Access:</span>
+        <span>Services below are dynamically synchronized and authorized against your authenticated Keycloak realm session.</span>
       </div>
     </div>
 
@@ -300,64 +287,12 @@
   <!-- CLIENT-SIDE APPLICATION SCRIPT -->
   <script>
     const appState = {
-      isLive: false,
       user: { username: '', roles: [], isAdmin: false },
       routes: [],
       adminRoutes: [],
       security: { publicPaths: [], rolePathAccess: {} },
       currentView: 'catalog',
-      currentAdminTab: 'routes',
-
-      // Mock Data for Offline/Local Simulation
-      mockUsers: {
-        userA: { username: 'Alice', roles: ['devops'], isAdmin: false },
-        userB: { username: 'Bob', roles: ['devops', 'reporting'], isAdmin: false },
-        admin: { username: 'Charlie', roles: ['admin'], isAdmin: true },
-        guest: { username: 'Dave', roles: ['guest'], isAdmin: false }
-      },
-      mockRoutes: [
-        {
-          id: 'jenkins-route',
-          title: 'Jenkins CI/CD',
-          description: 'Automated continuous integration and deployment pipeline execution server.',
-          pathPattern: '/jenkins/**',
-          launchUrl: '/jenkins/',
-          targetUri: 'http://jenkins:8080',
-          category: 'DevOps & Tooling',
-          icon: 'jenkins',
-          enabled: true
-        },
-        {
-          id: 'reports-route',
-          title: 'Analytics & Reporting Hub',
-          description: 'Business intelligence dashboard and real-time operational query metrics.',
-          pathPattern: '/reports/**',
-          launchUrl: '/reports/',
-          targetUri: 'http://reports-service:8082',
-          category: 'Reporting & Analytics',
-          icon: 'analytics',
-          enabled: true
-        },
-        {
-          id: 'app-service-route',
-          title: 'Business App Service',
-          description: 'Production core microservice hosted on Kubernetes / Minikube cluster.',
-          pathPattern: '/app/**',
-          launchUrl: '/app/',
-          targetUri: 'http://minikube:30080',
-          category: 'Core Microservices',
-          icon: 'k8s',
-          enabled: true
-        }
-      ],
-      mockSecurity: {
-        publicPaths: ['/keycloak/**', '/actuator/health'],
-        rolePathAccess: {
-          admin: ['/**'],
-          devops: ['/jenkins', '/jenkins/**'],
-          reporting: ['/reports', '/reports/**']
-        }
-      }
+      currentAdminTab: 'routes'
     };
 
     // Initialize Application
@@ -367,7 +302,6 @@
         if (userRes.ok) {
           const user = await userRes.json();
           if (user && user.username && user.username !== 'anonymous') {
-            appState.isLive = true;
             appState.user = user;
             updateUserDisplay();
             await loadLiveRoutes();
@@ -379,11 +313,25 @@
           }
         }
       } catch (e) {
-        console.warn('Backend /api/v1/portal/me not responding or local preview, using simulator mode.');
+        console.error('Failed to load user profile:', e);
       }
 
-      // Fallback to simulator mode
-      enableSimulatorMode();
+      // If unauthenticated, show prompt
+      document.getElementById('userNameLabel').textContent = 'Unauthenticated';
+      document.getElementById('userRoleBadge').textContent = 'Please log in';
+      document.getElementById('emptyCatalogState').classList.remove('hidden');
+      document.getElementById('emptyCatalogState').innerHTML = `
+        <div class="w-12 h-12 rounded-full bg-slate-800 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-300">Authentication Required</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">Please log in through Keycloak Single Sign-On to access your authorized services.</p>
+        <a href="/oauth2/authorization/keycloak" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition">
+          Log In via Keycloak &rarr;
+        </a>
+      `;
     }
 
     // Load Live Routes from Gateway API
@@ -395,7 +343,7 @@
           renderCatalog();
         }
       } catch (e) {
-        console.error('Error fetching live portal routes:', e);
+        console.error('Error fetching portal routes:', e);
       }
     }
 
@@ -416,41 +364,6 @@
       } catch (e) {
         console.error('Error fetching admin data:', e);
       }
-    }
-
-    // Fallback Simulator Mode
-    function enableSimulatorMode() {
-      appState.isLive = false;
-      document.getElementById('envBadge').textContent = 'Simulator';
-      document.getElementById('envBadge').className = 'text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      document.getElementById('simSelectorWrapper').classList.remove('hidden');
-      document.getElementById('bannerText').textContent = 'Simulator Mode: Switch between user personas in the header to preview role-based visibility.';
-      simulateUser('userA');
-    }
-
-    function simulateUser(userKey) {
-      const u = appState.mockUsers[userKey];
-      appState.user = u;
-      updateUserDisplay();
-
-      // Filter mock routes
-      appState.routes = appState.mockRoutes.filter(r => {
-        if (!r.enabled) return false;
-        if (u.isAdmin) return true;
-        for (const role of u.roles) {
-          const patterns = appState.mockSecurity.rolePathAccess[role] || [];
-          for (const pat of patterns) {
-            if (pat === '/**' || r.pathPattern.startsWith(pat.replace('/**', ''))) return true;
-          }
-        }
-        return false;
-      });
-
-      appState.adminRoutes = appState.mockRoutes;
-      appState.security = appState.mockSecurity;
-      document.getElementById('yamlViewer').textContent = JSON.stringify({ routes: appState.adminRoutes, security: appState.security }, null, 2);
-
-      renderCatalog();
     }
 
     function updateUserDisplay() {
@@ -593,32 +506,18 @@
     }
 
     async function toggleRouteStatus(routeId) {
-      if (appState.isLive) {
-        const route = appState.adminRoutes.find(r => r.id === routeId);
-        const action = route && route.enabled === false ? 'enable' : 'disable';
-        await fetch(`/api/v1/config/routes/${routeId}/${action}`, { method: 'PUT' });
-        await loadLiveAdminData();
-        await loadLiveRoutes();
-      } else {
-        const route = appState.adminRoutes.find(r => r.id === routeId);
-        if (route) route.enabled = !route.enabled;
-        renderAdmin();
-        renderCatalog();
-      }
+      const route = appState.adminRoutes.find(r => r.id === routeId);
+      const action = route && route.enabled === false ? 'enable' : 'disable';
+      await fetch(`/api/v1/config/routes/${routeId}/${action}`, { method: 'PUT' });
+      await loadLiveAdminData();
+      await loadLiveRoutes();
     }
 
     async function deleteRoute(routeId) {
       if (!confirm(`Are you sure you want to delete route "${routeId}"?`)) return;
-      if (appState.isLive) {
-        await fetch(`/api/v1/config/routes/${routeId}`, { method: 'DELETE' });
-        await loadLiveAdminData();
-        await loadLiveRoutes();
-      } else {
-        appState.adminRoutes = appState.adminRoutes.filter(r => r.id !== routeId);
-        appState.mockRoutes = appState.mockRoutes.filter(r => r.id !== routeId);
-        renderAdmin();
-        renderCatalog();
-      }
+      await fetch(`/api/v1/config/routes/${routeId}`, { method: 'DELETE' });
+      await loadLiveAdminData();
+      await loadLiveRoutes();
     }
 
     function switchAdminTab(tab) {
@@ -658,22 +557,13 @@
         metadata: { title, category, description, launchUrl: pathPattern.replace('/**', '/') }
       };
 
-      if (appState.isLive) {
-        await fetch('/api/v1/config/routes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        await loadLiveAdminData();
-        await loadLiveRoutes();
-      } else {
-        appState.mockRoutes.push({
-          id, title, description, pathPattern, launchUrl: pathPattern.replace('/**', '/'),
-          targetUri, category, icon: 'service', enabled: true
-        });
-        simulateUser(document.getElementById('userSelector').value);
-      }
-
+      await fetch('/api/v1/config/routes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await loadLiveAdminData();
+      await loadLiveRoutes();
       closeNewRouteModal();
     }
 
