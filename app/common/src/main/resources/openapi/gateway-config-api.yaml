@@ -153,9 +153,7 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: string
+              $ref: '#/components/schemas/PublicPathsRequestDto'
       responses:
         '200':
           description: Public paths updated
@@ -342,3 +340,11 @@ components:
             $ref: '#/components/schemas/RouteDefinitionDto'
         security:
           $ref: '#/components/schemas/GatewaySecurityConfigDto'
+
+    PublicPathsRequestDto:
+      type: object
+      properties:
+        paths:
+          type: array
+          items:
+            type: string

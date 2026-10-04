@@ -3,6 +3,7 @@ package com.jpg.apigateway.controller;
 import com.jpg.apigateway.api.SecurityManagementApi;
 import com.jpg.apigateway.config.DynamicSecurityRepositoryService;
 import com.jpg.apigateway.model.GatewaySecurityConfigDto;
+import com.jpg.apigateway.model.PublicPathsRequestDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
@@ -63,13 +64,14 @@ public class SecurityManagementController implements SecurityManagementApi {
     /**
      * Replaces the public path rules in database and updates runtime security cache.
      *
-     * @param requestBody Flux containing new public path patterns
+     * @param publicPathsRequestDto Mono containing wrapper object with new public path patterns
      * @param exchange current server web exchange
      * @return Mono containing ResponseEntity with Flux of updated public paths
      */
     @Override
-    public Mono<ResponseEntity<Flux<String>>> updatePublicPaths(Flux<String> requestBody, ServerWebExchange exchange) {
-        Flux<String> resultFlux = requestBody.collectList()
+    public Mono<ResponseEntity<Flux<String>>> updatePublicPaths(Mono<PublicPathsRequestDto> publicPathsRequestDto, ServerWebExchange exchange) {
+        Flux<String> resultFlux = publicPathsRequestDto
+                .map(dto -> dto.getPaths() != null ? dto.getPaths() : List.<String>of())
                 .flatMapMany(paths -> dynamicSecurityRepositoryService.updatePublicPaths(paths)
                         .flatMapMany(Flux::fromIterable));
         return Mono.just(ResponseEntity.ok(resultFlux));

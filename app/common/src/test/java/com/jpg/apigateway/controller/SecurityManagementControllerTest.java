@@ -2,6 +2,7 @@ package com.jpg.apigateway.controller;
 
 import com.jpg.apigateway.config.DynamicSecurityRepositoryService;
 import com.jpg.apigateway.model.GatewaySecurityConfigDto;
+import com.jpg.apigateway.model.PublicPathsRequestDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,14 +70,15 @@ class SecurityManagementControllerTest {
     }
 
     /**
-     * Verifies updatePublicPaths delegates list of paths to service and returns updated flux.
+     * Verifies updatePublicPaths delegates list of paths from DTO to service and returns updated flux.
      */
     @Test
     void testUpdatePublicPaths() {
         List<String> paths = List.of("/api/v1/auth/**", "/public/**");
+        PublicPathsRequestDto dto = new PublicPathsRequestDto().paths(paths);
         when(dynamicSecurityRepositoryService.updatePublicPaths(paths)).thenReturn(Mono.just(paths));
 
-        StepVerifier.create(controller.updatePublicPaths(Flux.fromIterable(paths), exchange))
+        StepVerifier.create(controller.updatePublicPaths(Mono.just(dto), exchange))
                 .assertNext(response -> {
                     assertEquals(HttpStatus.OK, response.getStatusCode());
                     Flux<String> bodyFlux = response.getBody();
