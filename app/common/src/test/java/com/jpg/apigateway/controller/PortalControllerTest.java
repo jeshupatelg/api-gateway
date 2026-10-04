@@ -73,7 +73,8 @@ class PortalControllerTest {
         RouteDefinition r1 = new RouteDefinition();
         r1.setId("jenkins-route");
         r1.setUri(URI.create("http://jenkins:8080"));
-        PredicateDefinition p1 = new PredicateDefinition("Path");
+        PredicateDefinition p1 = new PredicateDefinition();
+        p1.setName("Path");
         p1.addArg("pattern", "/jenkins/**");
         r1.setPredicates(List.of(p1));
         r1.setMetadata(Map.of("enabled", true, "title", "Jenkins CI/CD"));
@@ -81,7 +82,8 @@ class PortalControllerTest {
         RouteDefinition r2 = new RouteDefinition();
         r2.setId("reports-route");
         r2.setUri(URI.create("http://reports:8082"));
-        PredicateDefinition p2 = new PredicateDefinition("Path");
+        PredicateDefinition p2 = new PredicateDefinition();
+        p2.setName("Path");
         p2.addArg("pattern", "/reports/**");
         r2.setPredicates(List.of(p2));
         r2.setMetadata(Map.of("enabled", true, "title", "Reporting Hub"));
@@ -101,6 +103,35 @@ class PortalControllerTest {
                     assertEquals("jenkins-route", route.id());
                     assertEquals("Jenkins CI/CD", route.title());
                 })
+                .verifyComplete();
+    }
+
+    @Test
+    void testGetAccessibleRoutes_AdminSeesAllRoutes() {
+        RouteDefinition r1 = new RouteDefinition();
+        r1.setId("jenkins-route");
+        r1.setUri(URI.create("http://jenkins:8080"));
+        PredicateDefinition p1 = new PredicateDefinition();
+        p1.setName("Path");
+        p1.addArg("pattern", "/jenkins/**");
+        r1.setPredicates(List.of(p1));
+        r1.setMetadata(Map.of("enabled", true, "title", "Jenkins CI/CD"));
+
+        RouteDefinition r2 = new RouteDefinition();
+        r2.setId("reports-route");
+        r2.setUri(URI.create("http://reports:8082"));
+        PredicateDefinition p2 = new PredicateDefinition();
+        p2.setName("Path");
+        p2.addArg("pattern", "/reports/**");
+        r2.setPredicates(List.of(p2));
+        r2.setMetadata(Map.of("enabled", true, "title", "Reporting Hub"));
+
+        when(dynamicRouteRepository.getAllRoutes()).thenReturn(Flux.just(r1, r2));
+
+        Authentication authAdmin = new TestingAuthenticationToken("charlie", "creds", "ROLE_ADMIN");
+
+        StepVerifier.create(controller.getAccessibleRoutes(authAdmin))
+                .expectNextCount(2)
                 .verifyComplete();
     }
 }
