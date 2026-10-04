@@ -72,6 +72,15 @@
           Swagger UI
         </a>
 
+        <!-- Live Clock Widget -->
+        <div class="hidden sm:flex items-center gap-2 h-9 px-3 rounded-lg bg-slate-800/80 border border-slate-700/80 text-xs font-mono text-slate-300 shadow-sm" title="System / Local Time">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span id="headerClockTime" class="font-medium text-slate-200">--:--:--</span>
+          <span id="headerClockDate" class="text-[10px] text-slate-500 pl-1 border-l border-slate-700">---</span>
+        </div>
+
         <!-- User Chip -->
         <div class="h-9 px-3 rounded-lg bg-slate-800/80 border border-slate-700/80 flex items-center gap-2">
           <div class="w-6 h-6 rounded-full bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 flex items-center justify-center text-xs font-bold" id="userAvatar">U</div>
@@ -690,6 +699,18 @@
       }
     }
 
+    function updateClock() {
+      const now = new Date();
+      const timeEl = document.getElementById('headerClockTime');
+      const dateEl = document.getElementById('headerClockDate');
+      if (timeEl && dateEl) {
+        timeEl.textContent = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        dateEl.textContent = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
     init();
   </script>
 </body>
