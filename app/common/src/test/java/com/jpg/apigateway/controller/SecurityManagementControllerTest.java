@@ -70,7 +70,7 @@ class SecurityManagementControllerTest {
     }
 
     /**
-     * Verifies updatePublicPaths delegates list of paths from DTO to service and returns updated flux.
+     * Verifies updatePublicPaths delegates list of paths from DTO to service and returns updated DTO.
      */
     @Test
     void testUpdatePublicPaths() {
@@ -81,11 +81,9 @@ class SecurityManagementControllerTest {
         StepVerifier.create(controller.updatePublicPaths(Mono.just(dto), exchange))
                 .assertNext(response -> {
                     assertEquals(HttpStatus.OK, response.getStatusCode());
-                    Flux<String> bodyFlux = response.getBody();
-                    assertNotNull(bodyFlux);
-                    StepVerifier.create(bodyFlux)
-                            .expectNext("/api/v1/auth/**", "/public/**")
-                            .verifyComplete();
+                    PublicPathsRequestDto body = response.getBody();
+                    assertNotNull(body);
+                    assertEquals(paths, body.getPaths());
                 })
                 .verifyComplete();
 

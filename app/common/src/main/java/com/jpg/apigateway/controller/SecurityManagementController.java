@@ -66,15 +66,14 @@ public class SecurityManagementController implements SecurityManagementApi {
      *
      * @param publicPathsRequestDto Mono containing wrapper object with new public path patterns
      * @param exchange current server web exchange
-     * @return Mono containing ResponseEntity with Flux of updated public paths
+     * @return Mono containing ResponseEntity with PublicPathsRequestDto of updated public paths
      */
     @Override
-    public Mono<ResponseEntity<Flux<String>>> updatePublicPaths(Mono<PublicPathsRequestDto> publicPathsRequestDto, ServerWebExchange exchange) {
-        Flux<String> resultFlux = publicPathsRequestDto
+    public Mono<ResponseEntity<PublicPathsRequestDto>> updatePublicPaths(Mono<PublicPathsRequestDto> publicPathsRequestDto, ServerWebExchange exchange) {
+        return publicPathsRequestDto
                 .map(dto -> dto.getPaths() != null ? dto.getPaths() : List.<String>of())
-                .flatMapMany(paths -> dynamicSecurityRepositoryService.updatePublicPaths(paths)
-                        .flatMapMany(Flux::fromIterable));
-        return Mono.just(ResponseEntity.ok(resultFlux));
+                .flatMap(dynamicSecurityRepositoryService::updatePublicPaths)
+                .map(savedPaths -> ResponseEntity.ok(new PublicPathsRequestDto().paths(savedPaths)));
     }
 
     /**
