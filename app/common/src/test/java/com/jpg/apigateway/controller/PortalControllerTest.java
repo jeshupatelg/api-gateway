@@ -12,6 +12,7 @@ import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,6 +65,27 @@ class PortalControllerTest {
                 .assertNext(user -> {
                     assertEquals("charlie", user.username());
                     assertTrue(user.roles().contains("admin"));
+                    assertTrue(user.isAdmin());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testGetCurrentUser_WithOAuth2Claims() {
+        Map<String, Object> claims = Map.of(
+                "preferred_username", "rishu",
+                "name", "Rishu Patel",
+                "email", "rishupatel924@gmail.com"
+        );
+        OAuth2User oauth2User = mock(OAuth2User.class);
+        when(oauth2User.getAttributes()).thenReturn(claims);
+        Authentication auth = new TestingAuthenticationToken(oauth2User, "creds", "ROLE_ADMIN");
+
+        StepVerifier.create(controller.getCurrentUser(auth))
+                .assertNext(user -> {
+                    assertEquals("rishu", user.username());
+                    assertEquals("Rishu Patel", user.displayName());
+                    assertEquals("rishupatel924@gmail.com", user.email());
                     assertTrue(user.isAdmin());
                 })
                 .verifyComplete();

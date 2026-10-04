@@ -368,8 +368,15 @@
 
     function updateUserDisplay() {
       const u = appState.user;
-      document.getElementById('userNameLabel').textContent = u.username;
-      document.getElementById('userAvatar').textContent = (u.username || 'U').charAt(0).toUpperCase();
+      const display = u.displayName || u.username || 'User';
+      const label = document.getElementById('userNameLabel');
+      label.textContent = display;
+      if (u.username && u.displayName && u.username !== u.displayName) {
+        label.title = `@${u.username}${u.email ? ' (' + u.email + ')' : ''}`;
+      } else if (u.email) {
+        label.title = u.email;
+      }
+      document.getElementById('userAvatar').textContent = display.charAt(0).toUpperCase();
       document.getElementById('userRoleBadge').textContent = u.roles.length ? u.roles.join(', ') : 'no roles';
 
       const navAdmin = document.getElementById('navAdmin');

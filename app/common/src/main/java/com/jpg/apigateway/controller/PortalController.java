@@ -8,6 +8,7 @@ import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,7 +39,13 @@ public class PortalController {
         this.staticProperties = staticProperties;
     }
 
-    public record PortalUserDto(String username, List<String> roles, boolean isAdmin) {}
+    public record PortalUserDto(
+            String username,
+            String displayName,
+            String email,
+            List<String> roles,
+            boolean isAdmin
+    ) {}
 
     public record PortalRouteDto(
             String id,
@@ -58,8 +65,32 @@ public class PortalController {
     @GetMapping("/me")
     public Mono<PortalUserDto> getCurrentUser(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
-            return Mono.just(new PortalUserDto("anonymous", List.of(), false));
+            return Mono.just(new PortalUserDto("anonymous", "Anonymous", null, List.of(), false));
         }
+
+        Map<String, Object> attributes = extractAttributes(auth.getPrincipal());
+
+        String username = extractClaim(attributes, "preferred_username");
+        if (username == null) {
+            username = extractClaim(attributes, "username");
+        }
+        if (username == null) {
+            username = auth.getName();
+        }
+
+        String displayName = extractClaim(attributes, "name");
+        if (displayName == null) {
+            String given = extractClaim(attributes, "given_name");
+            String family = extractClaim(attributes, "family_name");
+            if (given != null || family != null) {
+                displayName = ((given != null ? given : "") + " " + (family != null ? family : "")).trim();
+            }
+        }
+        if (displayName == null || displayName.isBlank()) {
+            displayName = username;
+        }
+
+        String email = extractClaim(attributes, "email");
 
         List<String> roles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -68,7 +99,44 @@ public class PortalController {
                 .toList();
 
         boolean isAdmin = roles.contains("admin");
-        return Mono.just(new PortalUserDto(auth.getName(), roles, isAdmin));
+        return Mono.just(new PortalUserDto(username, displayName, email, roles, isAdmin));
+    }
+
+    private Map<String, Object> extractAttributes(Object principal) {
+        if (principal instanceof OAuth2User oauth2User) {
+            return oauth2User.getAttributes();
+        } else if (principal != null) {
+            try {
+                var method = principal.getClass().getMethod("getClaims");
+                Object result = method.invoke(principal);
+                if (result instanceof Map<?, ?> m) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> casted = (Map<String, Object>) m;
+                    return casted;
+                }
+            } catch (Exception ignored) {
+                try {
+                    var method = principal.getClass().getMethod("getAttributes");
+                    Object result = method.invoke(principal);
+                    if (result instanceof Map<?, ?> m) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> casted = (Map<String, Object>) m;
+                        return casted;
+                    }
+                } catch (Exception ignored2) {}
+            }
+        }
+        return Map.of();
+    }
+
+    private String extractClaim(Map<String, Object> claims, String key) {
+        if (claims != null && claims.containsKey(key)) {
+            Object val = claims.get(key);
+            if (val != null && !String.valueOf(val).isBlank()) {
+                return String.valueOf(val).trim();
+            }
+        }
+        return null;
     }
 
     /**

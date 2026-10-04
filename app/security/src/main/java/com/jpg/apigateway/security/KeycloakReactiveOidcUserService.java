@@ -42,7 +42,12 @@ public class KeycloakReactiveOidcUserService implements ReactiveOAuth2UserServic
             Set<GrantedAuthority> merged = new LinkedHashSet<>(user.getAuthorities());
             merged.addAll(realmRolesAsAuthorities(user.getAttributes()));
             merged.addAll(realmRolesAsAuthorities(user.getUserInfo().getClaims()));
-            return new DefaultOidcUser(merged, user.getIdToken(), user.getUserInfo());
+            String nameAttributeKey = userRequest.getClientRegistration()
+                    .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+            if (nameAttributeKey == null || nameAttributeKey.isBlank()) {
+                nameAttributeKey = "preferred_username";
+            }
+            return new DefaultOidcUser(merged, user.getIdToken(), user.getUserInfo(), nameAttributeKey);
         });
     }
 
