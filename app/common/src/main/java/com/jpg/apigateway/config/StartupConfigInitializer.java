@@ -13,16 +13,21 @@ import com.jpg.apigateway.repository.SecurityRolePathR2dbcRepository;
 import com.jpg.apigateway.security.service.DynamicSecurityCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
+import org.springframework.cloud.gateway.handler.predicate.PredicateDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.Ordered;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
+import java.net.URI;
 import java.time.Instant;
 import java.util.*;
 
@@ -44,9 +49,10 @@ public class StartupConfigInitializer implements ApplicationRunner {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper yamlMapper;
     private final ObjectMapper jsonMapper;
+    private final String keycloakInternalUrl;
 
     /**
-     * Constructs the StartupConfigInitializer with required repositories, mappers, and services.
+     * Constructs the StartupConfigInitializer with required repositories, mappers, and services using default or environment KEYCLOAK_INTERNAL_URL.
      *
      * @param routeRepository database repository for gateway routes
      * @param publicPathRepository database repository for public paths
@@ -65,6 +71,35 @@ public class StartupConfigInitializer implements ApplicationRunner {
                                     GatewayRouteMapper routeMapper,
                                     ApplicationEventPublisher eventPublisher,
                                     ObjectMapper jsonMapper) {
+        this(routeRepository, publicPathRepository, rolePathRepository,
+                dynamicRouteDefinitionRepositoryService, dynamicSecurityCacheService,
+                routeMapper, eventPublisher, jsonMapper,
+                System.getenv("KEYCLOAK_INTERNAL_URL"));
+    }
+
+    /**
+     * Constructs the StartupConfigInitializer with required repositories, mappers, services, and explicit keycloak internal URL.
+     *
+     * @param routeRepository database repository for gateway routes
+     * @param publicPathRepository database repository for public paths
+     * @param rolePathRepository database repository for role-path mappings
+     * @param dynamicRouteDefinitionRepositoryService in-memory gateway route definition repository
+     * @param dynamicSecurityCacheService dynamic security cache service
+     * @param routeMapper mapper bean for route transformations
+     * @param eventPublisher application event publisher for route refresh events
+     * @param jsonMapper JSON object mapper
+     * @param keycloakInternalUrl internal URL for Keycloak service
+     */
+    @Autowired
+    public StartupConfigInitializer(GatewayRouteR2dbcRepository routeRepository,
+                                    SecurityPublicPathR2dbcRepository publicPathRepository,
+                                    SecurityRolePathR2dbcRepository rolePathRepository,
+                                    DynamicRouteDefinitionRepositoryService dynamicRouteDefinitionRepositoryService,
+                                    DynamicSecurityCacheService dynamicSecurityCacheService,
+                                    GatewayRouteMapper routeMapper,
+                                    ApplicationEventPublisher eventPublisher,
+                                    ObjectMapper jsonMapper,
+                                    @Value("${KEYCLOAK_INTERNAL_URL:#{null}}") String keycloakInternalUrl) {
         this.routeRepository = routeRepository;
         this.publicPathRepository = publicPathRepository;
         this.rolePathRepository = rolePathRepository;
@@ -74,6 +109,7 @@ public class StartupConfigInitializer implements ApplicationRunner {
         this.eventPublisher = eventPublisher;
         this.jsonMapper = jsonMapper;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
+        this.keycloakInternalUrl = keycloakInternalUrl;
     }
 
     /**
@@ -213,48 +249,64 @@ public class StartupConfigInitializer implements ApplicationRunner {
     private Mono<Void> seedDefaultRouteConfig() {
         try {
             ClassPathResource resource = new ClassPathResource("config/default-routes.yaml");
-            if (!resource.exists()) {
+            List<Map<String, Object>> routeMaps = new ArrayList<>();
+            if (resource.exists()) {
+                try (InputStream is = resource.getInputStream()) {
+                    Map<String, Object> root = yamlMapper.readValue(is, new TypeReference<>() {});
+                    if (root != null) {
+                        Map<String, Object> spring = (Map<String, Object>) root.getOrDefault("spring", Map.of());
+                        Map<String, Object> cloud = (Map<String, Object>) spring.getOrDefault("cloud", Map.of());
+                        Map<String, Object> gateway = (Map<String, Object>) cloud.getOrDefault("gateway", Map.of());
+                        List<Map<String, Object>> routes = (List<Map<String, Object>>) gateway.getOrDefault("routes", List.of());
+                        if (routes != null) {
+                            routeMaps.addAll(routes);
+                        }
+                    }
+                }
+            } else {
                 log.warn("default-routes.yaml not found on classpath.");
+            }
+
+            List<RouteDefinition> definitions = new ArrayList<>();
+            for (Map<String, Object> map : routeMaps) {
+                RouteDefinition rd = jsonMapper.convertValue(map, RouteDefinition.class);
+                definitions.add(rd);
+            }
+
+            // Check all routes for id keycloak. If missing, add route for keycloak before saving.
+            boolean hasKeycloak = definitions.stream()
+                    .anyMatch(r -> r.getId() != null && r.getId().equalsIgnoreCase("keycloak"));
+            if (!hasKeycloak) {
+                log.info("Keycloak route not found in default routes. Adding keycloak route with highest priority...");
+                definitions.add(0, createKeycloakRouteDefinition());
+            }
+
+            if (definitions.isEmpty()) {
+                log.info("default-routes.yaml contains 0 routes. Gateway initialized with empty routes.");
                 return Mono.empty();
             }
-            try (InputStream is = resource.getInputStream()) {
-                Map<String, Object> root = yamlMapper.readValue(is, new TypeReference<>() {});
-                Map<String, Object> spring = (Map<String, Object>) root.getOrDefault("spring", Map.of());
-                Map<String, Object> cloud = (Map<String, Object>) spring.getOrDefault("cloud", Map.of());
-                Map<String, Object> gateway = (Map<String, Object>) cloud.getOrDefault("gateway", Map.of());
-                List<Map<String, Object>> routeMaps = (List<Map<String, Object>>) gateway.getOrDefault("routes", List.of());
 
-                if (routeMaps.isEmpty()) {
-                    log.info("default-routes.yaml contains 0 routes. Gateway initialized with empty routes.");
-                    return Mono.empty();
+            List<GatewayRouteEntity> entities = new ArrayList<>();
+            for (RouteDefinition rd : definitions) {
+                GatewayRouteEntity entity = routeMapper.toEntity(rd);
+                if (entity.getId() == null || entity.getId().isBlank()) {
+                    entity.setId(UUID.randomUUID().toString());
                 }
-
-                List<GatewayRouteEntity> entities = new ArrayList<>();
-                List<RouteDefinition> definitions = new ArrayList<>();
-
-                for (Map<String, Object> map : routeMaps) {
-                    RouteDefinition rd = jsonMapper.convertValue(map, RouteDefinition.class);
-                    definitions.add(rd);
-                    GatewayRouteEntity entity = routeMapper.toEntity(rd);
-                    if (entity.getId() == null || entity.getId().isBlank()) {
-                        entity.setId(UUID.randomUUID().toString());
-                    }
-                    if (entity.getCreatedAt() == null) {
-                        entity.setCreatedAt(Instant.now());
-                    }
-                    entity.setUpdatedAt(Instant.now());
-                    entities.add(entity);
+                if (entity.getCreatedAt() == null) {
+                    entity.setCreatedAt(Instant.now());
                 }
-
-                return routeRepository.saveAll(entities)
-                        .collectList()
-                        .doOnSuccess(saved -> {
-                            dynamicRouteDefinitionRepositoryService.updateCache(definitions);
-                            eventPublisher.publishEvent(new RefreshRoutesEvent(this));
-                            log.info("Seeded {} default routes into DB and triggered RefreshRoutesEvent.", saved.size());
-                        })
-                        .then();
+                entity.setUpdatedAt(Instant.now());
+                entities.add(entity);
             }
+
+            return routeRepository.saveAll(entities)
+                    .collectList()
+                    .doOnSuccess(saved -> {
+                        dynamicRouteDefinitionRepositoryService.updateCache(definitions);
+                        eventPublisher.publishEvent(new RefreshRoutesEvent(this));
+                        log.info("Seeded {} default routes into DB and triggered RefreshRoutesEvent.", saved.size());
+                    })
+                    .then();
         } catch (Exception e) {
             log.error("Error reading default-routes.yaml", e);
             return Mono.error(e);
@@ -263,6 +315,7 @@ public class StartupConfigInitializer implements ApplicationRunner {
 
     /**
      * Loads route definitions from database into dynamic route repository cache and fires RefreshRoutesEvent.
+     * Auto-provisions the Keycloak route if missing from the database.
      *
      * @return Mono completing when loading finishes
      */
@@ -270,11 +323,70 @@ public class StartupConfigInitializer implements ApplicationRunner {
         return routeRepository.findAll()
                 .map(routeMapper::toRouteDefinition)
                 .collectList()
-                .doOnSuccess(definitions -> {
-                    dynamicRouteDefinitionRepositoryService.updateCache(definitions);
-                    eventPublisher.publishEvent(new RefreshRoutesEvent(this));
-                    log.info("Loaded {} routes from DB and triggered RefreshRoutesEvent.", definitions.size());
-                })
-                .then();
+                .flatMap(definitions -> {
+                    boolean hasKeycloak = definitions.stream()
+                            .anyMatch(r -> r.getId() != null && r.getId().equalsIgnoreCase("keycloak"));
+                    if (!hasKeycloak) {
+                        log.info("Keycloak route not found in DB. Auto-provisioning keycloak route with highest priority...");
+                        RouteDefinition keycloakRoute = createKeycloakRouteDefinition();
+                        GatewayRouteEntity entity = routeMapper.toEntity(keycloakRoute);
+                        if (entity.getCreatedAt() == null) {
+                            entity.setCreatedAt(Instant.now());
+                        }
+                        entity.setUpdatedAt(Instant.now());
+                        return routeRepository.save(entity)
+                                .doOnSuccess(saved -> {
+                                    List<RouteDefinition> updated = new ArrayList<>(definitions);
+                                    updated.add(0, keycloakRoute);
+                                    dynamicRouteDefinitionRepositoryService.updateCache(updated);
+                                    eventPublisher.publishEvent(new RefreshRoutesEvent(this));
+                                    log.info("Added missing keycloak route into DB and triggered RefreshRoutesEvent.");
+                                })
+                                .then();
+                    } else {
+                        dynamicRouteDefinitionRepositoryService.updateCache(definitions);
+                        eventPublisher.publishEvent(new RefreshRoutesEvent(this));
+                        log.info("Loaded {} routes from DB and triggered RefreshRoutesEvent.", definitions.size());
+                        return Mono.empty();
+                    }
+                });
+    }
+
+    /**
+     * Creates a default RouteDefinition for Keycloak pointing to KEYCLOAK_INTERNAL_URL with highest priority.
+     *
+     * @return RouteDefinition configured for Keycloak
+     */
+    public RouteDefinition createKeycloakRouteDefinition() {
+        RouteDefinition rd = new RouteDefinition();
+        rd.setId("keycloak");
+        String targetUrl = getKeycloakInternalUrl();
+        try {
+            rd.setUri(new URI(targetUrl));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid URI for keycloak route: " + targetUrl, e);
+        }
+        rd.setOrder(Ordered.HIGHEST_PRECEDENCE);
+
+        PredicateDefinition pathPredicate = new PredicateDefinition("Path=/keycloak/**");
+        rd.setPredicates(List.of(pathPredicate));
+        rd.setFilters(new ArrayList<>());
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put(GatewayRouteMapper.METADATA_ENABLED, true);
+        rd.setMetadata(metadata);
+
+        return rd;
+    }
+
+    private String getKeycloakInternalUrl() {
+        if (keycloakInternalUrl != null && !keycloakInternalUrl.isBlank()) {
+            return keycloakInternalUrl;
+        }
+        String env = System.getenv("KEYCLOAK_INTERNAL_URL");
+        if (env != null && !env.isBlank()) {
+            return env;
+        }
+        throw new IllegalStateException("KEYCLOAK_INTERNAL_URL environment variable is required to configure the keycloak route but is not set");
     }
 }
