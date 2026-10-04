@@ -48,6 +48,7 @@ public class SecurityConfiguration {
 
         http.authorizeExchange(exchanges -> exchanges
                 .matchers(dynamicPublicPathMatcher).permitAll()
+                .pathMatchers("/", "/index.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/static/**", "/api/v1/portal/**").authenticated()
                 .anyExchange().access(rolePathReactiveAuthorizationManager));
 
         http.oauth2Login(Customizer.withDefaults());
