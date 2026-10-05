@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Gateway Portal & Console</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -30,7 +31,6 @@
               Gateway Portal
               <span class="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v1.0</span>
             </div>
-            <div class="text-xs text-slate-400">Spring Cloud &bull; Keycloak Secured</div>
           </div>
         </a>
 
@@ -68,19 +68,55 @@
           <span id="headerClockDate" class="text-[10px] text-slate-500 pl-1 border-l border-slate-700">---</span>
         </div>
 
-        <!-- User Chip -->
-        <div class="h-9 px-3 rounded-lg bg-slate-800/80 border border-slate-700/80 flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 flex items-center justify-center text-xs font-bold" id="userAvatar">U</div>
-          <span class="text-xs font-semibold text-slate-200" id="userNameLabel">Loading...</span>
-          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-700 text-slate-300" id="userRoleBadge">...</span>
-        </div>
+        <!-- User Account Dropdown -->
+        <div class="relative" id="userMenuContainer">
+          <button id="userMenuButton" onclick="toggleUserDropdown(event)" class="h-9 px-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 flex items-center gap-2 transition cursor-pointer text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-sm">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center text-xs font-bold" id="userAvatar">U</div>
+            <span class="font-semibold text-slate-200 tracking-tight" id="userNameLabel">Loading...</span>
+            <span id="userPrimaryBadge" class="hidden text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">ADMIN</span>
+            <svg id="userMenuChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-        <!-- Logout Button -->
-        <a href="/logout" id="logoutBtn" class="text-xs text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-slate-800 transition" title="Logout">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
-        </a>
+          <!-- Dropdown Menu -->
+          <div id="userDropdownMenu" class="hidden absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-4 text-xs z-50 space-y-3 backdrop-blur-md">
+            
+            <!-- User Profile Header -->
+            <div class="flex items-start gap-3 pb-3 border-b border-slate-800">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white text-base font-bold shadow-md flex-shrink-0" id="dropdownAvatar">
+                U
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-white text-sm truncate" id="dropdownDisplayName">Loading...</div>
+                <div class="text-[11px] text-slate-400 font-mono truncate" id="dropdownUsername">@username</div>
+                <div class="text-[11px] text-indigo-300 truncate mt-0.5" id="dropdownEmail">email@example.com</div>
+              </div>
+            </div>
+
+            <!-- Assigned Roles Section -->
+            <div>
+              <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <span>Assigned Realm Roles</span>
+                <span id="dropdownRoleCount" class="text-indigo-400 font-mono bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">0</span>
+              </div>
+              <div id="dropdownRolesList" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                <!-- Roles tags rendered here -->
+              </div>
+            </div>
+
+            <!-- Sign Out Button -->
+            <div class="pt-2 border-t border-slate-800">
+              <a href="/logout" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-slate-800/80 hover:bg-rose-500/10 text-slate-300 hover:text-rose-400 border border-slate-700/80 hover:border-rose-500/30 transition font-medium">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Sign Out
+              </a>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -227,60 +263,187 @@
 
   </main>
 
-  <!-- MODAL: ADD ROUTE -->
+  <!-- MODAL: ADD / EDIT ROUTE (Dual Mode: Form & Raw YAML) -->
   <div id="newRouteModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+      
+      <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-bold text-white">Register New Gateway Route</h3>
-        <button onclick="closeNewRouteModal()" class="text-slate-400 hover:text-slate-200">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+        <div class="space-y-0.5">
+          <h3 id="modalHeaderTitle" class="text-sm font-bold text-white">Register New Gateway Route</h3>
+          <p id="modalHeaderSubtitle" class="text-xs text-slate-400">Configure route predicates, downstream target, and filters.</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <!-- Editor Mode Switcher -->
+          <div class="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+            <button type="button" id="tabModeForm" onclick="switchRouteEditorMode('form')" class="px-3 py-1 font-semibold rounded-md bg-indigo-600 text-white shadow-sm transition">
+              Form Editor
+            </button>
+            <button type="button" id="tabModeYaml" onclick="switchRouteEditorMode('yaml')" class="px-3 py-1 font-semibold rounded-md text-slate-400 hover:text-slate-200 transition">
+              Raw YAML
+            </button>
+          </div>
+
+          <button type="button" onclick="closeNewRouteModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <form id="newRouteForm" onsubmit="handleCreateRoute(event)" class="space-y-4 text-xs">
-        <div>
-          <label class="block font-medium text-slate-300 mb-1">Route ID</label>
-          <input type="text" id="modalRouteId" required placeholder="e.g. billing-service" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
+      <!-- Route Editor Form -->
+      <form id="newRouteForm" onsubmit="handleSaveRouteModal(event)" class="space-y-4 text-xs">
+        
+        <!-- VIEW 1: Form Editor -->
+        <div id="routeFormView" class="space-y-4">
           <div>
-            <label class="block font-medium text-slate-300 mb-1">Display Title</label>
-            <input type="text" id="modalTitle" required placeholder="e.g. Billing Portal" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-medium text-slate-300">Route ID</label>
+              <span id="modalRouteIdNotice" class="hidden text-[10px] text-amber-400 font-mono">Immutable in edit mode</span>
+            </div>
+            <input type="text" id="modalRouteId" required placeholder="e.g. ticketing" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
           </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">Display Title</label>
+              <input type="text" id="modalTitle" required placeholder="e.g. Ticketing Service" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">Category</label>
+              <input type="text" id="modalCategory" required placeholder="e.g. Core, Ops, Support" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class="block font-medium text-slate-300 mb-1">Target Downstream URI</label>
+              <input type="text" id="modalUri" required placeholder="http://ticketing-app:8080 or lb://service" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">Order (Priority)</label>
+              <input type="number" id="modalOrder" value="0" placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+
           <div>
-            <label class="block font-medium text-slate-300 mb-1">Category</label>
-            <input type="text" id="modalCategory" required placeholder="e.g. Finance, Ops" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <label class="block font-medium text-slate-300 mb-1">Path Predicate</label>
+            <input type="text" id="modalPath" required placeholder="/ticketing/**" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Description</label>
+            <input type="text" id="modalDescription" required placeholder="Brief description of the service functionality" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="modalTokenRelay" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
+              <label for="modalTokenRelay" class="text-slate-300 cursor-pointer">Enable TokenRelay (forward Bearer JWT)</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="modalEnabled" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
+              <label for="modalEnabled" class="text-slate-300 cursor-pointer">Route Active</label>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label class="block font-medium text-slate-300 mb-1">Target Downstream URI</label>
-          <input type="text" id="modalUri" required placeholder="http://service:8080 or http://minikube:30080" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <!-- VIEW 2: Raw YAML Editor -->
+        <div id="routeYamlView" class="hidden space-y-3">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400">Specific YAML block for this route:</span>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="formatModalYaml()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] border border-slate-700 transition">
+                Format
+              </button>
+              <button type="button" onclick="copyModalYaml()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] border border-slate-700 transition">
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Textarea YAML Editor -->
+          <textarea id="modalYamlTextarea" spellcheck="false" rows="12" oninput="handleYamlInput()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-indigo-200 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 leading-relaxed"></textarea>
+
+          <!-- YAML Verifier Status Box -->
+          <div id="yamlVerifierStatusBox" class="p-3 rounded-lg border text-xs flex items-start justify-between gap-3 bg-slate-950/80 border-slate-800 transition-colors">
+            <div class="flex items-start gap-2.5">
+              <div id="yamlVerifierIcon" class="mt-0.5 flex-shrink-0 text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <div id="yamlVerifierTitle" class="font-semibold text-slate-300">YAML Verifier</div>
+                <div id="yamlVerifierDetails" class="text-slate-400 mt-0.5 font-mono text-[11px]">Click 'Verify YAML' to validate route syntax and required fields.</div>
+              </div>
+            </div>
+            <button type="button" id="btnVerifyYaml" onclick="runYamlVerification()" class="flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition flex items-center gap-1.5 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Verify YAML
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label class="block font-medium text-slate-300 mb-1">Path Predicate</label>
-          <input type="text" id="modalPath" required placeholder="/billing/**" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-
-        <div>
-          <label class="block font-medium text-slate-300 mb-1">Description</label>
-          <input type="text" id="modalDescription" required placeholder="Brief description of the service" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-        </div>
-
-        <div class="flex items-center gap-2 pt-2">
-          <input type="checkbox" id="modalTokenRelay" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
-          <label for="modalTokenRelay" class="text-slate-300">Enable TokenRelay (forward Bearer JWT downstream)</label>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-          <button type="button" onclick="closeNewRouteModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium">Cancel</button>
-          <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow">Save Route</button>
+        <!-- Modal Footer Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+          <div class="text-[11px] text-slate-500">
+            <span id="modalModeTip">Form mode active. Switch tabs to edit raw YAML.</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeNewRouteModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
+              Cancel
+            </button>
+            <button type="submit" id="modalSaveButton" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow transition flex items-center gap-1.5">
+              <span>Save Route</span>
+            </button>
+          </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- FLOATING CONTEXT MENU FOR ROUTES -->
+  <div id="routeActionMenu" class="hidden fixed z-50 w-44 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl py-1 text-xs divide-y divide-slate-800 text-slate-200">
+    <div class="py-1">
+      <button type="button" onclick="handleMenuAction('edit')" class="w-full text-left px-3 py-1.5 hover:bg-indigo-600/20 hover:text-indigo-300 flex items-center gap-2 transition">
+        <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit Route
+      </button>
+      <button type="button" onclick="handleMenuAction('copy-yaml')" class="w-full text-left px-3 py-1.5 hover:bg-indigo-600/20 hover:text-indigo-300 flex items-center gap-2 transition">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        Copy Route YAML
+      </button>
+    </div>
+    <div class="py-1">
+      <button type="button" onclick="handleMenuAction('toggle')" id="menuToggleStatusBtn" class="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 transition">
+        <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span id="menuToggleStatusText">Disable Route</span>
+      </button>
+      <button type="button" onclick="handleMenuAction('delete')" class="w-full text-left px-3 py-1.5 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 flex items-center gap-2 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Delete Route
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <div class="px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 shadow-2xl flex items-center gap-2.5 text-xs text-slate-100">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span id="toastMessage">Action completed</span>
     </div>
   </div>
 
@@ -317,8 +480,13 @@
       }
 
       // If unauthenticated, show prompt
-      document.getElementById('userNameLabel').textContent = 'Unauthenticated';
-      document.getElementById('userRoleBadge').textContent = 'Please log in';
+      document.getElementById('userNameLabel').textContent = 'Sign In';
+      const userMenuBtn = document.getElementById('userMenuButton');
+      if (userMenuBtn) {
+        userMenuBtn.onclick = () => window.location.href = '/oauth2/authorization/keycloak';
+      }
+      const chevron = document.getElementById('userMenuChevron');
+      if (chevron) chevron.classList.add('hidden');
       document.getElementById('emptyCatalogState').classList.remove('hidden');
       document.getElementById('emptyCatalogState').innerHTML = `
         <div class="w-12 h-12 rounded-full bg-slate-800 text-indigo-400 flex items-center justify-center mx-auto mb-3">
@@ -369,15 +537,65 @@
     function updateUserDisplay() {
       const u = appState.user;
       const display = u.displayName || u.username || 'User';
-      const label = document.getElementById('userNameLabel');
-      label.textContent = display;
-      if (u.username && u.displayName && u.username !== u.displayName) {
-        label.title = `@${u.username}${u.email ? ' (' + u.email + ')' : ''}`;
-      } else if (u.email) {
-        label.title = u.email;
-      }
+
+      // Header button
+      document.getElementById('userNameLabel').textContent = display;
       document.getElementById('userAvatar').textContent = display.charAt(0).toUpperCase();
-      document.getElementById('userRoleBadge').textContent = u.roles.length ? u.roles.join(', ') : 'no roles';
+
+      const primaryBadge = document.getElementById('userPrimaryBadge');
+      if (primaryBadge) {
+        if (u.isAdmin) {
+          primaryBadge.classList.remove('hidden');
+          primaryBadge.className = 'text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          primaryBadge.textContent = 'ADMIN';
+        } else if (u.roles && u.roles.length > 0) {
+          primaryBadge.classList.remove('hidden');
+          primaryBadge.className = 'text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+          primaryBadge.textContent = u.roles[0].toUpperCase();
+        } else {
+          primaryBadge.classList.add('hidden');
+        }
+      }
+
+      // Dropdown details
+      const dropAvatar = document.getElementById('dropdownAvatar');
+      if (dropAvatar) dropAvatar.textContent = display.charAt(0).toUpperCase();
+
+      const dropName = document.getElementById('dropdownDisplayName');
+      if (dropName) dropName.textContent = display;
+
+      const dropUser = document.getElementById('dropdownUsername');
+      if (dropUser) dropUser.textContent = u.username ? `@${u.username}` : '';
+
+      const dropEmail = document.getElementById('dropdownEmail');
+      if (dropEmail) {
+        if (u.email) {
+          dropEmail.textContent = u.email;
+          dropEmail.classList.remove('hidden');
+        } else {
+          dropEmail.classList.add('hidden');
+        }
+      }
+
+      const rolesList = document.getElementById('dropdownRolesList');
+      const roleCount = document.getElementById('dropdownRoleCount');
+      if (rolesList && roleCount) {
+        const roles = u.roles || [];
+        roleCount.textContent = roles.length;
+        if (roles.length === 0) {
+          rolesList.innerHTML = '<span class="text-slate-500 italic">No realm roles assigned</span>';
+        } else {
+          rolesList.innerHTML = roles.map(r => `
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono ${
+              r.toLowerCase() === 'admin'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold'
+                : 'bg-slate-800 text-slate-300 border border-slate-700'
+            }">
+              ${escapeHtml(r)}
+            </span>
+          `).join('');
+        }
+      }
 
       const navAdmin = document.getElementById('navAdmin');
       if (u.isAdmin) {
@@ -387,6 +605,46 @@
         if (appState.currentView === 'admin') switchView('catalog');
       }
     }
+
+    function toggleUserDropdown(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('userDropdownMenu');
+      const chevron = document.getElementById('userMenuChevron');
+      if (!menu) return;
+      const isHidden = menu.classList.contains('hidden');
+      if (isHidden) {
+        menu.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+      } else {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const container = document.getElementById('userMenuContainer');
+      const menu = document.getElementById('userDropdownMenu');
+      const chevron = document.getElementById('userMenuChevron');
+      if (container && menu && !container.contains(e.target)) {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+      }
+
+      const routeMenu = document.getElementById('routeActionMenu');
+      if (routeMenu && !routeMenu.contains(e.target)) {
+        closeRouteActionMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const menu = document.getElementById('userDropdownMenu');
+        const chevron = document.getElementById('userMenuChevron');
+        if (menu) menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+        closeRouteActionMenu();
+      }
+    });
 
     // Render Launchpad Catalog
     function renderCatalog() {
@@ -462,30 +720,63 @@
       if (view === 'admin') renderAdmin();
     }
 
+    let activeMenuRouteId = null;
+    let currentEditRouteId = null;
+    let currentModalMode = 'form'; // 'form' or 'yaml'
+
     function renderAdmin() {
       // Admin Routes Table
-      document.getElementById('adminRoutesTableBody').innerHTML = appState.adminRoutes.map(r => `
+      document.getElementById('adminRoutesTableBody').innerHTML = appState.adminRoutes.map(r => {
+        const displayTitle = (r.metadata && r.metadata.title) || r.title || r.id;
+        let pathPred = '';
+        if (r.predicates && r.predicates.length > 0) {
+          const p = r.predicates.find(item => item.name === 'Path');
+          if (p && p.args) {
+            pathPred = p.args.pattern || p.args._genkey_0 || '';
+          }
+        }
+        if (!pathPred) pathPred = r.pathPattern || (r.metadata && r.metadata.launchUrl) || '';
+        const targetUri = r.targetUri || r.uri || '';
+
+        return `
         <tr class="hover:bg-slate-800/40 transition">
           <td class="px-4 py-3">
-            <div class="font-semibold text-slate-100">${escapeHtml(r.title || r.id)}</div>
-            <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(r.id)}</div>
+            <div class="inline-flex flex-col items-start">
+              <button type="button" onclick="openRouteActionMenu(event, '${escapeHtml(r.id)}')" class="group flex items-center gap-1.5 font-semibold text-slate-100 hover:text-indigo-400 focus:outline-none transition rounded py-0.5 text-left cursor-pointer" title="Click to manage route">
+                <span class="underline decoration-slate-700/80 group-hover:decoration-indigo-400 underline-offset-2">${escapeHtml(displayTitle)}</span>
+                <span class="p-0.5 rounded group-hover:bg-indigo-500/20 text-slate-500 group-hover:text-indigo-300 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </span>
+              </button>
+              <span class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(r.id)}</span>
+            </div>
           </td>
-          <td class="px-4 py-3 font-mono text-indigo-300">${escapeHtml(r.pathPattern || (r.predicates && r.predicates[0]?.args?.pattern) || '')}</td>
-          <td class="px-4 py-3 font-mono text-slate-400">${escapeHtml(r.targetUri || r.uri || '')}</td>
+          <td class="px-4 py-3 font-mono text-indigo-300">${escapeHtml(pathPred)}</td>
+          <td class="px-4 py-3 font-mono text-slate-400">${escapeHtml(targetUri)}</td>
           <td class="px-4 py-3">
             <button onclick="toggleRouteStatus('${escapeHtml(r.id)}')" class="px-2 py-1 rounded text-[10px] font-semibold transition ${r.enabled !== false ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
               ${r.enabled !== false ? 'Enabled' : 'Disabled'}
             </button>
           </td>
           <td class="px-4 py-3 text-right">
-            <button onclick="deleteRoute('${escapeHtml(r.id)}')" class="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-rose-500/10 transition">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
-            </button>
+            <div class="flex items-center justify-end gap-1">
+              <button onclick="openEditRouteModal('${escapeHtml(r.id)}')" title="Edit Route" class="text-indigo-400 hover:text-indigo-300 p-1.5 rounded hover:bg-indigo-500/10 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button onclick="deleteRoute('${escapeHtml(r.id)}')" title="Delete Route" class="text-rose-400 hover:text-rose-300 p-1.5 rounded hover:bg-rose-500/10 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
           </td>
         </tr>
-      `).join('');
+        `;
+      }).join('');
 
       // Security Tab
       const roleContainer = document.getElementById('roleMatrixContent');
@@ -512,12 +803,64 @@
       `).join('');
     }
 
+    // Route Action Context Menu
+    function openRouteActionMenu(e, routeId) {
+      e.stopPropagation();
+      activeMenuRouteId = routeId;
+      const menu = document.getElementById('routeActionMenu');
+      const route = appState.adminRoutes.find(r => r.id === routeId);
+      if (!menu || !route) return;
+
+      const toggleText = document.getElementById('menuToggleStatusText');
+      if (toggleText) {
+        toggleText.textContent = route.enabled === false ? 'Enable Route' : 'Disable Route';
+      }
+
+      menu.classList.remove('hidden');
+      const rect = e.currentTarget.getBoundingClientRect();
+      const left = Math.min(rect.left, window.innerWidth - 190);
+      const top = rect.bottom + 4;
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    }
+
+    function closeRouteActionMenu() {
+      const menu = document.getElementById('routeActionMenu');
+      if (menu) menu.classList.add('hidden');
+      activeMenuRouteId = null;
+    }
+
+    function handleMenuAction(action) {
+      const routeId = activeMenuRouteId;
+      closeRouteActionMenu();
+      if (!routeId) return;
+
+      if (action === 'edit') {
+        openEditRouteModal(routeId);
+      } else if (action === 'copy-yaml') {
+        copySingleRouteYaml(routeId);
+      } else if (action === 'toggle') {
+        toggleRouteStatus(routeId);
+      } else if (action === 'delete') {
+        deleteRoute(routeId);
+      }
+    }
+
+    function copySingleRouteYaml(routeId) {
+      const route = appState.adminRoutes.find(r => r.id === routeId);
+      if (!route) return;
+      const yaml = routeToYaml(route);
+      navigator.clipboard.writeText(yaml);
+      showToastNotification(`YAML for route "${routeId}" copied to clipboard!`);
+    }
+
     async function toggleRouteStatus(routeId) {
       const route = appState.adminRoutes.find(r => r.id === routeId);
       const action = route && route.enabled === false ? 'enable' : 'disable';
       await fetch(`/api/v1/config/routes/${routeId}/${action}`, { method: 'PUT' });
       await loadLiveAdminData();
       await loadLiveRoutes();
+      showToastNotification(`Route "${routeId}" ${action === 'enable' ? 'enabled' : 'disabled'}.`);
     }
 
     async function deleteRoute(routeId) {
@@ -525,6 +868,7 @@
       await fetch(`/api/v1/config/routes/${routeId}`, { method: 'DELETE' });
       await loadLiveAdminData();
       await loadLiveRoutes();
+      showToastNotification(`Route "${routeId}" deleted.`);
     }
 
     function switchAdminTab(tab) {
@@ -541,42 +885,453 @@
       });
     }
 
-    function openNewRouteModal() { document.getElementById('newRouteModal').classList.remove('hidden'); }
-    function closeNewRouteModal() { document.getElementById('newRouteModal').classList.add('hidden'); document.getElementById('newRouteForm').reset(); }
+    // Modal Control: Create & Edit
+    function openNewRouteModal() {
+      currentEditRouteId = null;
+      document.getElementById('modalHeaderTitle').textContent = 'Register New Gateway Route';
+      document.getElementById('modalHeaderSubtitle').textContent = 'Configure route predicates, downstream target, and filters.';
+      
+      const idInput = document.getElementById('modalRouteId');
+      idInput.value = '';
+      idInput.disabled = false;
+      document.getElementById('modalRouteIdNotice').classList.add('hidden');
 
-    async function handleCreateRoute(e) {
-      e.preventDefault();
-      const id = document.getElementById('modalRouteId').value.trim();
+      document.getElementById('newRouteForm').reset();
+      document.getElementById('modalOrder').value = 0;
+      document.getElementById('modalEnabled').checked = true;
+      document.getElementById('modalTokenRelay').checked = true;
+
+      const template = {
+        id: 'new-service',
+        uri: 'http://my-service:8080',
+        order: 0,
+        enabled: true,
+        predicates: [{ name: 'Path', args: { pattern: '/service/**' } }],
+        filters: [{ name: 'TokenRelay', args: {} }],
+        metadata: {
+          title: 'New Service',
+          category: 'Core',
+          description: 'Service description',
+          launchUrl: '/service/'
+        }
+      };
+      document.getElementById('modalYamlTextarea').value = routeToYaml(template);
+      updateYamlVerifierStatus({ valid: true, message: 'Template route YAML is loaded and valid.' });
+
+      switchRouteEditorMode('form', false);
+      document.getElementById('newRouteModal').classList.remove('hidden');
+    }
+
+    function openEditRouteModal(routeId) {
+      const route = appState.adminRoutes.find(r => r.id === routeId);
+      if (!route) {
+        alert(`Route "${routeId}" not found in current configuration.`);
+        return;
+      }
+      currentEditRouteId = routeId;
+
+      document.getElementById('modalHeaderTitle').textContent = `Edit Route: ${route.id}`;
+      document.getElementById('modalHeaderSubtitle').textContent = `Modify gateway routing rules and downstream target for "${route.id}".`;
+
+      const idInput = document.getElementById('modalRouteId');
+      idInput.value = route.id;
+      idInput.disabled = true;
+      document.getElementById('modalRouteIdNotice').classList.remove('hidden');
+
+      populateFormFromRoute(route);
+
+      const yamlContent = routeToYaml(route);
+      document.getElementById('modalYamlTextarea').value = yamlContent;
+      updateYamlVerifierStatus({ valid: true, message: `Loaded existing configuration for "${route.id}". YAML is valid.` });
+
+      switchRouteEditorMode('form', false);
+      document.getElementById('newRouteModal').classList.remove('hidden');
+    }
+
+    function closeNewRouteModal() {
+      document.getElementById('newRouteModal').classList.add('hidden');
+      document.getElementById('newRouteForm').reset();
+      currentEditRouteId = null;
+    }
+
+    // Mode Switcher: Form vs Raw YAML
+    function switchRouteEditorMode(mode, sync = true) {
+      if (mode === currentModalMode) return;
+
+      if (sync) {
+        if (mode === 'yaml') {
+          // Form -> YAML
+          const routeFromForm = getRouteFromFormInputs();
+          if (!routeFromForm.id) {
+            alert('Please specify a Route ID in the form before switching to Raw YAML mode.');
+            return;
+          }
+          document.getElementById('modalYamlTextarea').value = routeToYaml(routeFromForm);
+          runYamlVerification();
+        } else {
+          // YAML -> Form
+          const yamlText = document.getElementById('modalYamlTextarea').value;
+          const verification = parseAndVerifyYaml(yamlText);
+          if (!verification.valid) {
+            updateYamlVerifierStatus(verification);
+            alert(`Cannot switch to Form Editor: ${verification.error}\n\nPlease fix the YAML errors before switching views.`);
+            return;
+          }
+          populateFormFromRoute(verification.data);
+        }
+      }
+
+      currentModalMode = mode;
+      document.getElementById('routeFormView').classList.toggle('hidden', mode !== 'form');
+      document.getElementById('routeYamlView').classList.toggle('hidden', mode !== 'yaml');
+
+      const tabForm = document.getElementById('tabModeForm');
+      const tabYaml = document.getElementById('tabModeYaml');
+      const tip = document.getElementById('modalModeTip');
+
+      if (mode === 'form') {
+        tabForm.className = "px-3 py-1 font-semibold rounded-md bg-indigo-600 text-white shadow-sm transition";
+        tabYaml.className = "px-3 py-1 font-semibold rounded-md text-slate-400 hover:text-slate-200 transition";
+        if (tip) tip.textContent = "Form mode active. Switch tabs to edit raw YAML.";
+      } else {
+        tabYaml.className = "px-3 py-1 font-semibold rounded-md bg-indigo-600 text-white shadow-sm transition";
+        tabForm.className = "px-3 py-1 font-semibold rounded-md text-slate-400 hover:text-slate-200 transition";
+        if (tip) tip.textContent = "Raw YAML mode active. Verify syntax before saving.";
+      }
+    }
+
+    // Form <-> Route Data Extraction
+    function getRouteFromFormInputs() {
+      const id = (currentEditRouteId || document.getElementById('modalRouteId').value).trim();
       const title = document.getElementById('modalTitle').value.trim();
-      const category = document.getElementById('modalCategory').value.trim();
+      const category = document.getElementById('modalCategory').value.trim() || 'General';
       const targetUri = document.getElementById('modalUri').value.trim();
       const pathPattern = document.getElementById('modalPath').value.trim();
       const description = document.getElementById('modalDescription').value.trim();
+      const order = parseInt(document.getElementById('modalOrder').value, 10) || 0;
       const tokenRelay = document.getElementById('modalTokenRelay').checked;
+      const enabled = document.getElementById('modalEnabled').checked;
 
-      const payload = {
+      const filters = tokenRelay ? [{ name: 'TokenRelay', args: {} }] : [];
+      const predicates = pathPattern ? [{ name: 'Path', args: { pattern: pathPattern } }] : [];
+
+      return {
         id,
         uri: targetUri,
-        order: 0,
-        enabled: true,
-        predicates: [{ name: 'Path', args: { pattern: pathPattern } }],
-        filters: tokenRelay ? [{ name: 'TokenRelay', args: {} }] : [],
-        metadata: { title, category, description, launchUrl: pathPattern.replace('/**', '/') }
+        order,
+        enabled,
+        predicates,
+        filters,
+        metadata: {
+          title: title || id,
+          category,
+          description,
+          launchUrl: pathPattern ? pathPattern.replace('/**', '/') : '/'
+        }
+      };
+    }
+
+    function populateFormFromRoute(route) {
+      if (currentEditRouteId) {
+        document.getElementById('modalRouteId').value = currentEditRouteId;
+      } else {
+        document.getElementById('modalRouteId').value = route.id || '';
+      }
+
+      const meta = route.metadata || {};
+      document.getElementById('modalTitle').value = meta.title || route.title || route.id || '';
+      document.getElementById('modalCategory').value = meta.category || route.category || 'Core';
+      document.getElementById('modalUri').value = route.uri || route.targetUri || '';
+
+      let path = '';
+      if (route.predicates && Array.isArray(route.predicates)) {
+        const p = route.predicates.find(item => item && item.name === 'Path');
+        if (p && p.args) {
+          path = p.args.pattern || p.args._genkey_0 || '';
+        }
+      }
+      if (!path) path = route.pathPattern || meta.launchUrl || '';
+      document.getElementById('modalPath').value = path;
+
+      document.getElementById('modalDescription').value = meta.description || route.description || '';
+      document.getElementById('modalOrder').value = typeof route.order === 'number' ? route.order : 0;
+      document.getElementById('modalEnabled').checked = route.enabled !== false;
+
+      const hasTokenRelay = (route.filters || []).some(f => f && f.name === 'TokenRelay');
+      document.getElementById('modalTokenRelay').checked = hasTokenRelay;
+    }
+
+    // YAML Serialization & Verification
+    function routeToYaml(route) {
+      const cleanObj = {
+        id: route.id || '',
+        uri: route.uri || route.targetUri || '',
+        order: typeof route.order === 'number' ? route.order : 0,
+        enabled: route.enabled !== false,
+        predicates: route.predicates && route.predicates.length > 0 ? route.predicates : [
+          { name: 'Path', args: { pattern: route.pathPattern || '/**' } }
+        ],
+        filters: route.filters && route.filters.length > 0 ? route.filters : [],
+        metadata: {
+          title: (route.metadata && route.metadata.title) || route.title || route.id || '',
+          category: (route.metadata && route.metadata.category) || route.category || 'Core',
+          description: (route.metadata && route.metadata.description) || route.description || '',
+          launchUrl: (route.metadata && route.metadata.launchUrl) || route.launchUrl || (route.pathPattern ? route.pathPattern.replace('/**', '/') : '/')
+        }
       };
 
-      await fetch('/api/v1/config/routes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      await loadLiveAdminData();
-      await loadLiveRoutes();
-      closeNewRouteModal();
+      if (window.jsyaml && window.jsyaml.dump) {
+        try {
+          return window.jsyaml.dump(cleanObj, { indent: 2, lineWidth: -1, noRefs: true });
+        } catch (e) {
+          console.warn('jsyaml dump failed:', e);
+        }
+      }
+      return fallbackDumpYaml(cleanObj);
+    }
+
+    function parseAndVerifyYaml(yamlText) {
+      if (!yamlText || !yamlText.trim()) {
+        return { valid: false, error: 'YAML route definition cannot be empty.' };
+      }
+
+      let parsed = null;
+      if (window.jsyaml && window.jsyaml.load) {
+        try {
+          parsed = window.jsyaml.load(yamlText);
+        } catch (e) {
+          const lineMsg = e.mark ? ` (Line ${e.mark.line + 1}, Col ${e.mark.column + 1})` : '';
+          return { valid: false, error: `YAML Syntax Error${lineMsg}: ${e.reason || e.message}` };
+        }
+      } else {
+        try {
+          parsed = fallbackParseYaml(yamlText);
+        } catch (e) {
+          return { valid: false, error: `YAML Parse Error: ${e.message}` };
+        }
+      }
+
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { valid: false, error: 'YAML root must be a mapping/object representing a single route definition.' };
+      }
+
+      if (!parsed.id || typeof parsed.id !== 'string' || !parsed.id.trim()) {
+        return { valid: false, error: "Validation Error: Route 'id' is required and must be a non-empty string." };
+      }
+
+      if (currentEditRouteId && parsed.id !== currentEditRouteId) {
+        return { valid: false, error: `Validation Error: Route ID cannot be changed from "${currentEditRouteId}" while editing.` };
+      }
+
+      if (!parsed.uri || typeof parsed.uri !== 'string' || !parsed.uri.trim()) {
+        return { valid: false, error: "Validation Error: Route 'uri' is required (e.g. 'http://service:8080')." };
+      }
+
+      if (!parsed.uri.startsWith('http://') && !parsed.uri.startsWith('https://') && !parsed.uri.startsWith('lb://') && !parsed.uri.startsWith('ws://')) {
+        return { valid: false, error: `Validation Error: 'uri' "${parsed.uri}" must start with http://, https://, lb:// or ws://` };
+      }
+
+      if (parsed.predicates && !Array.isArray(parsed.predicates)) {
+        return { valid: false, error: "Validation Error: 'predicates' must be a list of predicate definitions." };
+      }
+
+      if (parsed.filters && !Array.isArray(parsed.filters)) {
+        return { valid: false, error: "Validation Error: 'filters' must be a list of filter definitions." };
+      }
+
+      return { valid: true, data: parsed };
+    }
+
+    function runYamlVerification() {
+      const yamlText = document.getElementById('modalYamlTextarea').value;
+      const result = parseAndVerifyYaml(yamlText);
+      updateYamlVerifierStatus(result);
+      return result;
+    }
+
+    function handleYamlInput() {
+      // Clear status or run lightweight verification
+      const yamlText = document.getElementById('modalYamlTextarea').value;
+      if (!yamlText.trim()) {
+        updateYamlVerifierStatus({ valid: false, error: 'YAML is empty.' });
+        return;
+      }
+      const result = parseAndVerifyYaml(yamlText);
+      updateYamlVerifierStatus(result);
+    }
+
+    function updateYamlVerifierStatus(result) {
+      const box = document.getElementById('yamlVerifierStatusBox');
+      const icon = document.getElementById('yamlVerifierIcon');
+      const title = document.getElementById('yamlVerifierTitle');
+      const details = document.getElementById('yamlVerifierDetails');
+      if (!box || !title || !details) return;
+
+      if (result.valid) {
+        box.className = "p-3 rounded-lg border text-xs flex items-start justify-between gap-3 bg-emerald-950/20 border-emerald-500/40 transition-colors";
+        icon.className = "mt-0.5 flex-shrink-0 text-emerald-400";
+        icon.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+        title.innerHTML = `<span class="text-emerald-300 font-semibold">✓ Valid Route YAML</span>`;
+        const rData = result.data;
+        if (rData) {
+          details.innerHTML = `<span class="text-emerald-400/90 font-mono text-[11px]">Ready to save: ID="${escapeHtml(rData.id)}", Target="${escapeHtml(rData.uri)}"</span>`;
+        } else {
+          details.innerHTML = `<span class="text-emerald-400/90 font-mono text-[11px]">${escapeHtml(result.message || 'Syntax and schema verified.')}</span>`;
+        }
+      } else {
+        box.className = "p-3 rounded-lg border text-xs flex items-start justify-between gap-3 bg-rose-950/25 border-rose-500/40 transition-colors";
+        icon.className = "mt-0.5 flex-shrink-0 text-rose-400";
+        icon.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+        title.innerHTML = `<span class="text-rose-300 font-semibold">✕ Verification Error</span>`;
+        details.innerHTML = `<span class="text-rose-400 font-mono text-[11px]">${escapeHtml(result.error)}</span>`;
+      }
+    }
+
+    function formatModalYaml() {
+      const yamlText = document.getElementById('modalYamlTextarea').value;
+      const result = parseAndVerifyYaml(yamlText);
+      if (!result.valid) {
+        alert(`Cannot format: ${result.error}`);
+        return;
+      }
+      document.getElementById('modalYamlTextarea').value = routeToYaml(result.data);
+      updateYamlVerifierStatus(result);
+      showToastNotification('YAML formatted.');
+    }
+
+    function copyModalYaml() {
+      const yamlText = document.getElementById('modalYamlTextarea').value;
+      navigator.clipboard.writeText(yamlText);
+      showToastNotification('Route YAML copied to clipboard!');
+    }
+
+    // Modal Save Handler
+    async function handleSaveRouteModal(e) {
+      if (e) e.preventDefault();
+      
+      let payload = null;
+      if (currentModalMode === 'yaml') {
+        const yamlText = document.getElementById('modalYamlTextarea').value;
+        const verification = parseAndVerifyYaml(yamlText);
+        if (!verification.valid) {
+          updateYamlVerifierStatus(verification);
+          alert(`Cannot save route: ${verification.error}\n\nPlease verify and resolve YAML errors before saving.`);
+          return;
+        }
+        updateYamlVerifierStatus(verification);
+        payload = verification.data;
+      } else {
+        const id = document.getElementById('modalRouteId').value.trim();
+        const uri = document.getElementById('modalUri').value.trim();
+        if (!id) {
+          alert('Route ID is required.');
+          return;
+        }
+        if (!uri) {
+          alert('Target Downstream URI is required.');
+          return;
+        }
+        payload = getRouteFromFormInputs();
+      }
+
+      // Ensure metadata has launchUrl fallback
+      if (!payload.metadata) payload.metadata = {};
+      if (!payload.metadata.launchUrl && payload.predicates && payload.predicates.length > 0) {
+        const p = payload.predicates.find(x => x && x.name === 'Path');
+        if (p && p.args && (p.args.pattern || p.args._genkey_0)) {
+          payload.metadata.launchUrl = (p.args.pattern || p.args._genkey_0).replace('/**', '/');
+        }
+      }
+
+      const saveBtn = document.getElementById('modalSaveButton');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span>Saving...</span>`;
+      }
+
+      try {
+        const res = await fetch('/api/v1/config/routes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          alert(`Server error (${res.status}) saving route: ${errText || res.statusText}`);
+          return;
+        }
+
+        closeNewRouteModal();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Route "${payload.id}" successfully ${currentEditRouteId ? 'updated' : 'registered'}!`);
+      } catch (err) {
+        console.error('Failed to save route:', err);
+        alert(`Network error saving route: ${err.message}`);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<span>Save Route</span>`;
+        }
+      }
+    }
+
+    // Fallback YAML helpers if offline
+    function fallbackDumpYaml(obj, indent = 0) {
+      const spaces = ' '.repeat(indent);
+      let lines = [];
+      for (const [key, val] of Object.entries(obj)) {
+        if (val === null || val === undefined) continue;
+        if (typeof val === 'object' && !Array.isArray(val)) {
+          lines.push(`${spaces}${key}:`);
+          lines.push(fallbackDumpYaml(val, indent + 2));
+        } else if (Array.isArray(val)) {
+          if (val.length === 0) {
+            lines.push(`${spaces}${key}: []`);
+          } else {
+            lines.push(`${spaces}${key}:`);
+            for (const item of val) {
+              if (typeof item === 'object') {
+                const sub = fallbackDumpYaml(item, indent + 4).trimStart();
+                lines.push(`${spaces}  - ${sub}`);
+              } else {
+                lines.push(`${spaces}  - ${item}`);
+              }
+            }
+          }
+        } else if (typeof val === 'string') {
+          const escaped = val.includes('\n') || val.includes(':') || val.includes('#') ? `"${val.replace(/"/g, '\\"')}"` : val;
+          lines.push(`${spaces}${key}: ${escaped}`);
+        } else {
+          lines.push(`${spaces}${key}: ${val}`);
+        }
+      }
+      return lines.join('\n');
+    }
+
+    function fallbackParseYaml(str) {
+      try {
+        return JSON.parse(str);
+      } catch (e) {
+        throw new Error('YAML parser CDN not loaded and input is not JSON: ' + e.message);
+      }
+    }
+
+    function showToastNotification(msg) {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMessage');
+      if (!toast || !text) return;
+      text.textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3000);
     }
 
     function copyYamlToClipboard() {
       navigator.clipboard.writeText(document.getElementById('yamlViewer').textContent);
-      alert('YAML configuration copied to clipboard!');
+      showToastNotification('Full Gateway YAML configuration copied to clipboard!');
     }
 
     function escapeHtml(str) {
