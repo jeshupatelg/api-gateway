@@ -338,16 +338,70 @@
             <input type="text" id="modalDescription" required placeholder="Brief description of the service functionality" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
           </div>
 
-          <div class="flex items-center justify-between pt-1">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="modalTokenRelay" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
-              <label for="modalTokenRelay" class="text-slate-300 cursor-pointer">Enable TokenRelay (forward Bearer JWT)</label>
-            </div>
+          <div class="flex items-center justify-between pt-1 pb-1 border-b border-slate-800">
             <div class="flex items-center gap-2">
               <input type="checkbox" id="modalEnabled" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
-              <label for="modalEnabled" class="text-slate-300 cursor-pointer">Route Active</label>
+              <label for="modalEnabled" class="text-slate-300 cursor-pointer font-medium">Route Active / Enabled</label>
+            </div>
+            <div class="text-[10px] text-slate-500 font-mono">
+              Status determines runtime routing
             </div>
           </div>
+
+          <!-- ROUTE FILTERS SECTION (BOX STRUCTURED EDIT) -->
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block font-medium text-slate-300">Gateway Filters</label>
+                <p class="text-[11px] text-slate-500">Configure filters applied to downstream requests and responses.</p>
+              </div>
+              <button type="button" onclick="addModalFilter()" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition flex items-center gap-1 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Filter
+              </button>
+            </div>
+
+            <!-- Quick Filter Presets -->
+            <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+              <span class="text-slate-500 text-[10px] uppercase font-mono">Presets:</span>
+              <button type="button" onclick="addPresetFilter('TokenRelay')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] transition" title="Forward Bearer JWT downstream">
+                + TokenRelay
+              </button>
+              <button type="button" onclick="addPresetFilter('StripPrefix', 'parts=1')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] transition" title="Strip URI prefix parts">
+                + StripPrefix
+              </button>
+              <button type="button" onclick="addPresetFilter('AddRequestHeader', 'name=X-Request-Source, value=Gateway')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] transition" title="Inject custom request header">
+                + AddRequestHeader
+              </button>
+              <button type="button" onclick="addPresetFilter('RewritePath', 'regexp=/old/(?<segment>.*), replacement=/${segment}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] transition" title="Rewrite path pattern">
+                + RewritePath
+              </button>
+            </div>
+
+            <!-- Filter Rows List -->
+            <div id="modalFiltersList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            
+            <div id="emptyFiltersNotice" class="hidden text-center py-4 px-3 rounded-lg border border-dashed border-slate-800 bg-slate-950/40 text-slate-500 text-xs">
+              No filters currently configured. Click <span class="text-indigo-400 font-medium">Add Filter</span> or a preset above.
+            </div>
+          </div>
+
+          <datalist id="commonFilterNames">
+            <option value="TokenRelay">
+            <option value="StripPrefix">
+            <option value="AddRequestHeader">
+            <option value="AddResponseHeader">
+            <option value="RewritePath">
+            <option value="PrefixPath">
+            <option value="SetPath">
+            <option value="RedirectTo">
+            <option value="CircuitBreaker">
+            <option value="RequestRateLimiter">
+            <option value="Retry">
+            <option value="SecureHeaders">
+          </datalist>
         </div>
 
         <!-- VIEW 2: Raw YAML Editor -->
@@ -885,6 +939,145 @@
       });
     }
 
+    // Gateway Filters State
+    let modalFilters = [];
+
+    function argsMapToString(args) {
+      if (!args || typeof args !== 'object') return '';
+      const keys = Object.keys(args);
+      if (keys.length === 0) return '';
+      if (keys.length === 1 && keys[0] === '_genkey_0') {
+        return String(args._genkey_0);
+      }
+      return keys.map(k => `${k}=${args[k]}`).join(', ');
+    }
+
+    function stringToArgsMap(str) {
+      if (!str || !str.trim()) return {};
+      const trimmed = str.trim();
+
+      // JSON format support e.g. {"parts": "1"}
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (typeof parsed === 'object' && parsed !== null) return parsed;
+        } catch (e) {}
+      }
+
+      const args = {};
+      const pairs = trimmed.split(/,\s*(?=[a-zA-Z0-9_\-\.]+\s*[=:])|\n/);
+      let hasKeyValue = false;
+
+      for (const pair of pairs) {
+        const delimiterIndex = pair.search(/[=:]/);
+        if (delimiterIndex !== -1) {
+          const key = pair.slice(0, delimiterIndex).trim();
+          const val = pair.slice(delimiterIndex + 1).trim();
+          if (key) {
+            args[key] = val;
+            hasKeyValue = true;
+          }
+        }
+      }
+
+      if (!hasKeyValue) {
+        args['_genkey_0'] = trimmed;
+      }
+
+      return args;
+    }
+
+    function renderModalFilters() {
+      const container = document.getElementById('modalFiltersList');
+      const emptyNotice = document.getElementById('emptyFiltersNotice');
+      if (!container) return;
+
+      if (modalFilters.length === 0) {
+        container.innerHTML = '';
+        if (emptyNotice) emptyNotice.classList.remove('hidden');
+        return;
+      }
+
+      if (emptyNotice) emptyNotice.classList.add('hidden');
+      container.innerHTML = modalFilters.map((f, index) => `
+        <div class="filter-row flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700/80 transition" data-index="${index}">
+          <div class="w-2/5">
+            <input type="text" list="commonFilterNames" value="${escapeHtml(f.name)}" placeholder="Filter (e.g. StripPrefix)" 
+              oninput="updateModalFilterName(${index}, this.value)"
+              class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-indigo-300 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600">
+          </div>
+          <div class="flex-1">
+            <input type="text" value="${escapeHtml(argsMapToString(f.args))}" placeholder="Args: key=value (optional)" 
+              oninput="updateModalFilterArgs(${index}, this.value)"
+              class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600">
+          </div>
+          <button type="button" onclick="removeModalFilter(${index})" title="Delete filter" class="text-slate-500 hover:text-rose-400 p-1.5 rounded hover:bg-rose-500/10 transition flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addModalFilter(name = '', argsStr = '') {
+      getFiltersFromUi(); // sync existing rows first
+      modalFilters.push({
+        name: name,
+        args: typeof argsStr === 'string' ? stringToArgsMap(argsStr) : (argsStr || {})
+      });
+      renderModalFilters();
+    }
+
+    function addPresetFilter(name, argsStr = '') {
+      getFiltersFromUi();
+      const existing = modalFilters.find(f => f.name.toLowerCase() === name.toLowerCase());
+      if (existing && !argsStr) {
+        showToastNotification(`Filter "${name}" is already present.`);
+        return;
+      }
+      addModalFilter(name, argsStr);
+      showToastNotification(`Added filter "${name}".`);
+    }
+
+    function removeModalFilter(index) {
+      getFiltersFromUi();
+      modalFilters.splice(index, 1);
+      renderModalFilters();
+    }
+
+    function updateModalFilterName(index, val) {
+      if (modalFilters[index]) {
+        modalFilters[index].name = val.trim();
+      }
+    }
+
+    function updateModalFilterArgs(index, val) {
+      if (modalFilters[index]) {
+        modalFilters[index].args = stringToArgsMap(val);
+      }
+    }
+
+    function getFiltersFromUi() {
+      const container = document.getElementById('modalFiltersList');
+      if (!container) return modalFilters;
+      const rows = container.querySelectorAll('.filter-row');
+      const filters = [];
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const name = inputs[0] ? inputs[0].value.trim() : '';
+        const argsStr = inputs[1] ? inputs[1].value.trim() : '';
+        if (name) {
+          filters.push({
+            name: name,
+            args: stringToArgsMap(argsStr)
+          });
+        }
+      });
+      modalFilters = filters;
+      return filters;
+    }
+
     // Modal Control: Create & Edit
     function openNewRouteModal() {
       currentEditRouteId = null;
@@ -899,7 +1092,10 @@
       document.getElementById('newRouteForm').reset();
       document.getElementById('modalOrder').value = 0;
       document.getElementById('modalEnabled').checked = true;
-      document.getElementById('modalTokenRelay').checked = true;
+
+      // Default with TokenRelay
+      modalFilters = [{ name: 'TokenRelay', args: {} }];
+      renderModalFilters();
 
       const template = {
         id: 'new-service',
@@ -922,8 +1118,12 @@
       document.getElementById('newRouteModal').classList.remove('hidden');
     }
 
-    function openEditRouteModal(routeId) {
-      const route = appState.adminRoutes.find(r => r.id === routeId);
+    async function openEditRouteModal(routeId) {
+      let route = appState.adminRoutes.find(r => r.id === routeId);
+      if (!route) {
+        await loadLiveAdminData();
+        route = appState.adminRoutes.find(r => r.id === routeId);
+      }
       if (!route) {
         alert(`Route "${routeId}" not found in current configuration.`);
         return;
@@ -931,7 +1131,7 @@
       currentEditRouteId = routeId;
 
       document.getElementById('modalHeaderTitle').textContent = `Edit Route: ${route.id}`;
-      document.getElementById('modalHeaderSubtitle').textContent = `Modify gateway routing rules and downstream target for "${route.id}".`;
+      document.getElementById('modalHeaderSubtitle').textContent = `Modify gateway routing rules, filters, and downstream target for "${route.id}".`;
 
       const idInput = document.getElementById('modalRouteId');
       idInput.value = route.id;
@@ -942,7 +1142,7 @@
 
       const yamlContent = routeToYaml(route);
       document.getElementById('modalYamlTextarea').value = yamlContent;
-      updateYamlVerifierStatus({ valid: true, message: `Loaded existing configuration for "${route.id}". YAML is valid.` });
+      updateYamlVerifierStatus({ valid: true, message: `Loaded configuration for "${route.id}". YAML and filters verified.` });
 
       switchRouteEditorMode('form', false);
       document.getElementById('newRouteModal').classList.remove('hidden');
@@ -952,15 +1152,17 @@
       document.getElementById('newRouteModal').classList.add('hidden');
       document.getElementById('newRouteForm').reset();
       currentEditRouteId = null;
+      modalFilters = [];
+      renderModalFilters();
     }
 
-    // Mode Switcher: Form vs Raw YAML
+    // Mode Switcher: Form vs Raw YAML (with Full Filter Sync)
     function switchRouteEditorMode(mode, sync = true) {
       if (mode === currentModalMode) return;
 
       if (sync) {
         if (mode === 'yaml') {
-          // Form -> YAML
+          // Form -> YAML: serialize form inputs + all configured filters
           const routeFromForm = getRouteFromFormInputs();
           if (!routeFromForm.id) {
             alert('Please specify a Route ID in the form before switching to Raw YAML mode.');
@@ -969,7 +1171,7 @@
           document.getElementById('modalYamlTextarea').value = routeToYaml(routeFromForm);
           runYamlVerification();
         } else {
-          // YAML -> Form
+          // YAML -> Form: parse YAML and populate form fields + filters
           const yamlText = document.getElementById('modalYamlTextarea').value;
           const verification = parseAndVerifyYaml(yamlText);
           if (!verification.valid) {
@@ -1009,10 +1211,10 @@
       const pathPattern = document.getElementById('modalPath').value.trim();
       const description = document.getElementById('modalDescription').value.trim();
       const order = parseInt(document.getElementById('modalOrder').value, 10) || 0;
-      const tokenRelay = document.getElementById('modalTokenRelay').checked;
       const enabled = document.getElementById('modalEnabled').checked;
 
-      const filters = tokenRelay ? [{ name: 'TokenRelay', args: {} }] : [];
+      // Extract all filters from the dynamic list
+      const filters = getFiltersFromUi();
       const predicates = pathPattern ? [{ name: 'Path', args: { pattern: pathPattern } }] : [];
 
       return {
@@ -1057,12 +1259,48 @@
       document.getElementById('modalOrder').value = typeof route.order === 'number' ? route.order : 0;
       document.getElementById('modalEnabled').checked = route.enabled !== false;
 
-      const hasTokenRelay = (route.filters || []).some(f => f && f.name === 'TokenRelay');
-      document.getElementById('modalTokenRelay').checked = hasTokenRelay;
+      // Populate filters list
+      modalFilters = [];
+      if (route.filters && Array.isArray(route.filters)) {
+        modalFilters = route.filters.map(f => {
+          if (typeof f === 'string') {
+            const eqIdx = f.indexOf('=');
+            if (eqIdx !== -1) {
+              return { name: f.slice(0, eqIdx).trim(), args: stringToArgsMap(f.slice(eqIdx + 1).trim()) };
+            }
+            return { name: f.trim(), args: {} };
+          }
+          if (typeof f === 'object' && f !== null) {
+            return {
+              name: f.name || '',
+              args: (f.args && typeof f.args === 'object') ? { ...f.args } : {}
+            };
+          }
+          return null;
+        }).filter(f => f && f.name.length > 0);
+      }
+      renderModalFilters();
     }
 
     // YAML Serialization & Verification
     function routeToYaml(route) {
+      const cleanFilters = (route.filters || []).map(f => {
+        if (typeof f === 'string') {
+          const eqIdx = f.indexOf('=');
+          if (eqIdx !== -1) {
+            return { name: f.slice(0, eqIdx).trim(), args: stringToArgsMap(f.slice(eqIdx + 1).trim()) };
+          }
+          return { name: f.trim(), args: {} };
+        }
+        if (typeof f === 'object' && f !== null) {
+          return {
+            name: f.name || '',
+            args: (f.args && typeof f.args === 'object') ? f.args : {}
+          };
+        }
+        return null;
+      }).filter(f => f && f.name.length > 0);
+
       const cleanObj = {
         id: route.id || '',
         uri: route.uri || route.targetUri || '',
@@ -1071,7 +1309,7 @@
         predicates: route.predicates && route.predicates.length > 0 ? route.predicates : [
           { name: 'Path', args: { pattern: route.pathPattern || '/**' } }
         ],
-        filters: route.filters && route.filters.length > 0 ? route.filters : [],
+        filters: cleanFilters,
         metadata: {
           title: (route.metadata && route.metadata.title) || route.title || route.id || '',
           category: (route.metadata && route.metadata.category) || route.category || 'Core',
@@ -1139,6 +1377,26 @@
         return { valid: false, error: "Validation Error: 'filters' must be a list of filter definitions." };
       }
 
+      // Normalize filters to standard object format
+      if (parsed.filters && Array.isArray(parsed.filters)) {
+        parsed.filters = parsed.filters.map(f => {
+          if (typeof f === 'string') {
+            const eqIdx = f.indexOf('=');
+            if (eqIdx !== -1) {
+              return { name: f.slice(0, eqIdx).trim(), args: stringToArgsMap(f.slice(eqIdx + 1).trim()) };
+            }
+            return { name: f.trim(), args: {} };
+          }
+          if (typeof f === 'object' && f !== null) {
+            return {
+              name: f.name || '',
+              args: (f.args && typeof f.args === 'object') ? f.args : {}
+            };
+          }
+          return null;
+        }).filter(f => f && f.name);
+      }
+
       return { valid: true, data: parsed };
     }
 
@@ -1150,7 +1408,6 @@
     }
 
     function handleYamlInput() {
-      // Clear status or run lightweight verification
       const yamlText = document.getElementById('modalYamlTextarea').value;
       if (!yamlText.trim()) {
         updateYamlVerifierStatus({ valid: false, error: 'YAML is empty.' });
@@ -1174,7 +1431,8 @@
         title.innerHTML = `<span class="text-emerald-300 font-semibold">✓ Valid Route YAML</span>`;
         const rData = result.data;
         if (rData) {
-          details.innerHTML = `<span class="text-emerald-400/90 font-mono text-[11px]">Ready to save: ID="${escapeHtml(rData.id)}", Target="${escapeHtml(rData.uri)}"</span>`;
+          const filterCount = rData.filters ? rData.filters.length : 0;
+          details.innerHTML = `<span class="text-emerald-400/90 font-mono text-[11px]">ID="${escapeHtml(rData.id)}", Target="${escapeHtml(rData.uri)}", Filters=${filterCount}. Ready to save.</span>`;
         } else {
           details.innerHTML = `<span class="text-emerald-400/90 font-mono text-[11px]">${escapeHtml(result.message || 'Syntax and schema verified.')}</span>`;
         }
@@ -1221,7 +1479,7 @@
         updateYamlVerifierStatus(verification);
         payload = verification.data;
       } else {
-        const id = document.getElementById('modalRouteId').value.trim();
+        const id = (currentEditRouteId || document.getElementById('modalRouteId').value).trim();
         const uri = document.getElementById('modalUri').value.trim();
         if (!id) {
           alert('Route ID is required.');
@@ -1260,6 +1518,17 @@
           const errText = await res.text();
           alert(`Server error (${res.status}) saving route: ${errText || res.statusText}`);
           return;
+        }
+
+        // Update local state immediately with returned saved DTO
+        const savedDto = await res.json().catch(() => null);
+        if (savedDto && savedDto.id) {
+          const idx = appState.adminRoutes.findIndex(r => r.id === savedDto.id);
+          if (idx !== -1) {
+            appState.adminRoutes[idx] = savedDto;
+          } else {
+            appState.adminRoutes.push(savedDto);
+          }
         }
 
         closeNewRouteModal();
