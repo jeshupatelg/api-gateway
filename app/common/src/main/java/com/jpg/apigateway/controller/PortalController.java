@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -142,7 +143,7 @@ public class PortalController {
     /**
      * Returns all enabled routes that the authenticated user has permissions to access based on their roles.
      */
-    @GetMapping("/routes")
+    @GetMapping(value = "/routes", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<PortalRouteDto> getAccessibleRoutes(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
             return Flux.empty();
@@ -150,8 +151,9 @@ public class PortalController {
 
         List<String> userRoles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .filter(a -> a != null && a.startsWith("ROLE_"))
-                .map(a -> a.substring("ROLE_".length()).toLowerCase(Locale.ROOT))
+                .filter(Objects::nonNull)
+                .map(a -> a.startsWith("ROLE_") ? a.substring("ROLE_".length()) : a)
+                .map(a -> a.toLowerCase(Locale.ROOT))
                 .toList();
         boolean isAdmin = userRoles.contains("admin");
 
@@ -192,6 +194,21 @@ public class PortalController {
 
         for (String userRole : userRoles) {
             List<String> allowedPatterns = rolePaths.get(userRole.toLowerCase(Locale.ROOT));
+            if (allowedPatterns == null) {
+                allowedPatterns = rolePaths.get("role_" + userRole.toLowerCase(Locale.ROOT));
+            }
+            if (allowedPatterns == null) {
+                for (Map.Entry<String, List<String>> entry : rolePaths.entrySet()) {
+                    String k = entry.getKey();
+                    if (k != null) {
+                        String cleanK = k.startsWith("ROLE_") || k.startsWith("role_") ? k.substring(5) : k;
+                        if (cleanK.equalsIgnoreCase(userRole)) {
+                            allowedPatterns = entry.getValue();
+                            break;
+                        }
+                    }
+                }
+            }
             if (allowedPatterns != null) {
                 for (String allowed : allowedPatterns) {
                     if (allowed != null && (antPathMatcher.match(allowed, pathPattern) || antPathMatcher.match(pathPattern, allowed))) {
@@ -207,13 +224,27 @@ public class PortalController {
     private String extractPathPattern(RouteDefinition rd) {
         if (rd.getPredicates() != null) {
             for (PredicateDefinition pd : rd.getPredicates()) {
-                if ("Path".equalsIgnoreCase(pd.getName()) && pd.getArgs() != null) {
+                if ("Path".equalsIgnoreCase(pd.getName()) && pd.getArgs() != null && !pd.getArgs().isEmpty()) {
+                    if (pd.getArgs().containsKey("pattern")) {
+                        return pd.getArgs().get("pattern");
+                    }
+                    if (pd.getArgs().containsKey("patterns")) {
+                        return pd.getArgs().get("patterns");
+                    }
+                    if (pd.getArgs().containsKey("_genkey_0")) {
+                        return pd.getArgs().get("_genkey_0");
+                    }
                     return pd.getArgs().values().stream().findFirst().orElse(null);
                 }
             }
         }
-        if (rd.getMetadata() != null && rd.getMetadata().containsKey("path")) {
-            return String.valueOf(rd.getMetadata().get("path"));
+        if (rd.getMetadata() != null) {
+            if (rd.getMetadata().containsKey("pathPattern") && rd.getMetadata().get("pathPattern") != null) {
+                return String.valueOf(rd.getMetadata().get("pathPattern"));
+            }
+            if (rd.getMetadata().containsKey("path") && rd.getMetadata().get("path") != null) {
+                return String.valueOf(rd.getMetadata().get("path"));
+            }
         }
         return null;
     }
@@ -221,13 +252,28 @@ public class PortalController {
     private PortalRouteDto toPortalDto(RouteDefinition rd) {
         Map<String, Object> meta = rd.getMetadata() != null ? rd.getMetadata() : Map.of();
         String pathPattern = extractPathPattern(rd);
-        String title = meta.get("title") instanceof String s ? s : rd.getId();
-        String desc = meta.get("description") instanceof String s ? s : "Gateway service route for " + rd.getId();
-        String category = meta.get("category") instanceof String s ? s : "Applications";
-        String icon = meta.get("icon") instanceof String s ? s : "service";
+        String title = meta.get("title") instanceof String s && !s.isBlank() ? s : rd.getId();
+        String desc = meta.get("description") instanceof String s && !s.isBlank() ? s : "Gateway service route for " + rd.getId();
+        String category = meta.get("category") instanceof String s && !s.isBlank() ? s : "Applications";
+        
+        String icon = meta.get("icon") instanceof String s && !s.isBlank() ? s : null;
+        if (icon == null && rd.getId() != null) {
+            String lowerId = rd.getId().toLowerCase(Locale.ROOT);
+            if (lowerId.contains("ticket")) {
+                icon = "ticketing";
+            } else if (lowerId.contains("keycloak") || lowerId.contains("auth")) {
+                icon = "keycloak";
+            } else if (lowerId.contains("jenkins") || lowerId.contains("ci")) {
+                icon = "jenkins";
+            } else {
+                icon = "service";
+            }
+        } else if (icon == null) {
+            icon = "service";
+        }
 
-        String launchUrl = meta.get("launchUrl") instanceof String s ? s : null;
-        if (launchUrl == null && pathPattern != null) {
+        String launchUrl = meta.get("launchUrl") instanceof String s && !s.isBlank() ? s : null;
+        if (launchUrl == null && pathPattern != null && !pathPattern.isBlank()) {
             launchUrl = pathPattern.replace("/**", "/").replace("/*", "/");
         } else if (launchUrl == null) {
             launchUrl = "/" + rd.getId() + "/";
@@ -247,10 +293,19 @@ public class PortalController {
     }
 
     private boolean isRouteEnabled(RouteDefinition rd) {
-        if (rd == null || rd.getMetadata() == null) {
+        if (rd == null) {
+            return false;
+        }
+        if (rd.getMetadata() == null) {
             return true;
         }
         Object enabledObj = rd.getMetadata().get(GatewayRouteMapper.METADATA_ENABLED);
-        return enabledObj == null || Boolean.TRUE.equals(enabledObj) || "true".equalsIgnoreCase(String.valueOf(enabledObj));
+        if (enabledObj == null) {
+            return true;
+        }
+        if (enabledObj instanceof Boolean b) {
+            return b;
+        }
+        return "true".equalsIgnoreCase(String.valueOf(enabledObj));
     }
 }
