@@ -225,18 +225,32 @@
       <!-- Admin Tab 2: Security & Role Matrix -->
       <div id="adminTabSecurity" class="hidden space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Role-to-Path Rules -->
           <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
-            <div>
-              <h3 class="text-sm font-semibold text-white">Role-to-Path Access Rules</h3>
-              <p class="text-xs text-slate-400">Controls which Keycloak realm roles grant entry to path patterns.</p>
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Role-to-Path Access Rules</h3>
+                <p class="text-xs text-slate-400">Controls which Keycloak realm roles grant entry to path patterns.</p>
+              </div>
+              <button onclick="openAddRoleModal()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1 flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Role
+              </button>
             </div>
             <div id="roleMatrixContent" class="space-y-3 font-mono text-xs"></div>
           </div>
 
+          <!-- Public Path Whitelist -->
           <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
-            <div>
-              <h3 class="text-sm font-semibold text-white">Public Path Whitelist</h3>
-              <p class="text-xs text-slate-400">Endpoints permitted without requiring any authentication.</p>
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Public Path Whitelist</h3>
+                <p class="text-xs text-slate-400">Endpoints permitted without requiring any authentication.</p>
+              </div>
+              <button onclick="openAddPublicPathModal()" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1 flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Public Path
+              </button>
             </div>
             <div id="publicPathsContent" class="space-y-2 font-mono text-xs"></div>
           </div>
@@ -461,6 +475,68 @@
     </div>
   </div>
 
+  <!-- MODAL: ADD / EDIT ROLE RULE -->
+  <div id="addRoleModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="roleModalTitle" class="text-sm font-bold text-white">Add Role-to-Path Rule</h3>
+        <button type="button" onclick="closeAddRoleModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="addRoleForm" onsubmit="handleSaveRoleModal(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Keycloak Realm Role Name</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-mono text-xs">ROLE_</span>
+            <input type="text" id="roleModalRoleInput" required placeholder="USER or DEVOPS" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-16 pr-3 py-2 text-slate-200 uppercase font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Must match the realm role in Keycloak (e.g. ROLE_USER, ROLE_TICKETING_USER).</p>
+        </div>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Initial Path Pattern(s)</label>
+          <input type="text" id="roleModalPathInput" required placeholder="/ticketing/**, /api/v1/user/**" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+          <p class="text-[10px] text-slate-500 mt-1">Comma-separated Ant path patterns granted to this role.</p>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddRoleModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
+            Cancel
+          </button>
+          <button type="submit" id="roleModalSaveBtn" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow transition">
+            Save Role Rule
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD PUBLIC PATH -->
+  <div id="addPublicPathModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white">Add Public Path Pattern</h3>
+        <button type="button" onclick="closeAddPublicPathModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="addPublicPathForm" onsubmit="handleSavePublicPathModal(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Public Whitelist Path Pattern</label>
+          <input type="text" id="publicPathModalInput" required placeholder="/public/** or /docs/**" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+          <p class="text-[10px] text-slate-500 mt-1">Requests matching this Ant pattern bypass Keycloak authentication completely.</p>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddPublicPathModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
+            Cancel
+          </button>
+          <button type="submit" id="publicPathModalSaveBtn" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow transition">
+            Add to Whitelist
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- FLOATING CONTEXT MENU FOR ROUTES -->
   <div id="routeActionMenu" class="hidden fixed z-50 w-44 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl py-1 text-xs divide-y divide-slate-800 text-slate-200">
     <div class="py-1">
@@ -590,6 +666,7 @@
           const yamlText = await yamlRes.text();
           document.getElementById('yamlViewer').textContent = yamlText;
         }
+        if (appState.currentView === 'admin') renderAdmin();
       } catch (e) {
         console.error('Error fetching admin data:', e);
       }
@@ -855,29 +932,341 @@
         `;
       }).join('');
 
-      // Security Tab
+      // Security Tab: Role-to-Path Access Rules
       const roleContainer = document.getElementById('roleMatrixContent');
       const roleMap = appState.security.rolePathAccess || {};
-      roleContainer.innerHTML = Object.entries(roleMap).map(([role, paths]) => `
-        <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-indigo-400 font-sans">ROLE_${role.toUpperCase()}</span>
-            <span class="text-[10px] text-slate-500">${paths.length} pattern(s)</span>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            ${paths.map(p => `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${escapeHtml(p)}</span>`).join('')}
-          </div>
-        </div>
-      `).join('');
+      const roleEntries = Object.entries(roleMap);
 
+      if (roleEntries.length === 0) {
+        roleContainer.innerHTML = `<div class="text-slate-500 italic text-xs py-4 text-center">No role access rules configured.</div>`;
+      } else {
+        roleContainer.innerHTML = roleEntries.map(([role, paths]) => {
+          const displayRole = role.toUpperCase().startsWith('ROLE_') ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`;
+          const isDefaultAdmin = role.toLowerCase() === 'role_admin' || role.toLowerCase() === 'admin';
+          return `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700/80 transition space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-indigo-400 font-mono tracking-wide">${escapeHtml(displayRole)}</span>
+                <span class="text-[10px] text-slate-500">(${paths.length} pattern${paths.length === 1 ? '' : 's'})</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="promptAddPathToRole('${escapeHtml(role)}')" class="px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 border border-slate-700 transition flex items-center gap-1" title="Add path pattern to this role">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  <span>Add Path</span>
+                </button>
+                ${isDefaultAdmin ? '' : `
+                <button type="button" onclick="deleteRoleRule('${escapeHtml(role)}')" class="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Delete this role rule">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+                `}
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5">
+              ${paths.length === 0 ? '<span class="text-slate-600 text-[11px] italic">No paths mapped</span>' : paths.map(p => `
+                <span class="group inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-200 text-xs">
+                  <span class="font-mono text-indigo-200">${escapeHtml(p)}</span>
+                  <button type="button" onclick="removePathFromRole('${escapeHtml(role)}', '${escapeHtml(p)}')" class="text-slate-500 hover:text-rose-400 transition p-0.5 rounded" title="Remove path pattern">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+          `;
+        }).join('');
+      }
+
+      // Security Tab: Public Path Whitelist
       const pubContainer = document.getElementById('publicPathsContent');
       const pubPaths = appState.security.publicPaths || [];
-      pubContainer.innerHTML = pubPaths.map(p => `
-        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-          <span class="text-slate-300">${escapeHtml(p)}</span>
-          <span class="text-[10px] text-emerald-400 font-sans font-medium">Bypass Auth</span>
-        </div>
-      `).join('');
+
+      if (pubPaths.length === 0) {
+        pubContainer.innerHTML = `<div class="text-slate-500 italic text-xs py-4 text-center">No public whitelist paths configured.</div>`;
+      } else {
+        pubContainer.innerHTML = pubPaths.map(p => `
+          <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700/80 transition">
+            <span class="text-slate-200 font-mono text-xs">${escapeHtml(p)}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-emerald-400 font-sans font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Bypass Auth</span>
+              <button type="button" onclick="deletePublicPath('${escapeHtml(p)}')" class="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Remove public path whitelist">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Role & Public Path Management Handlers
+    function openAddRoleModal() {
+      document.getElementById('addRoleModal').classList.remove('hidden');
+      document.getElementById('roleModalRoleInput').value = '';
+      document.getElementById('roleModalPathInput').value = '';
+      setTimeout(() => document.getElementById('roleModalRoleInput').focus(), 50);
+    }
+
+    function closeAddRoleModal() {
+      document.getElementById('addRoleModal').classList.add('hidden');
+      document.getElementById('addRoleForm').reset();
+    }
+
+    async function handleSaveRoleModal(e) {
+      if (e) e.preventDefault();
+      const rawRole = (document.getElementById('roleModalRoleInput').value || '').trim();
+      const rawPaths = (document.getElementById('roleModalPathInput').value || '').trim();
+
+      if (!rawRole) {
+        alert('Please enter a role name.');
+        return;
+      }
+
+      const role = rawRole.toUpperCase().startsWith('ROLE_') ? rawRole.toUpperCase() : `ROLE_${rawRole.toUpperCase()}`;
+      const newPaths = rawPaths.split(',').map(s => s.trim()).filter(Boolean).map(p => p.startsWith('/') ? p : '/' + p);
+
+      if (newPaths.length === 0) {
+        alert('Please specify at least one path pattern (e.g. /ticketing/**).');
+        return;
+      }
+
+      const currentRoles = { ...(appState.security.rolePathAccess || {}) };
+      const existingPaths = currentRoles[role] || [];
+      const mergedPaths = Array.from(new Set([...existingPaths, ...newPaths]));
+      currentRoles[role] = mergedPaths;
+
+      const saveBtn = document.getElementById('roleModalSaveBtn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/v1/config/security/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentRoles)
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to save role rule (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.rolePathAccess = currentRoles;
+        closeAddRoleModal();
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Role rule for "${role}" successfully saved!`);
+      } catch (err) {
+        console.error('Error saving role rule:', err);
+        alert(`Error saving role rule: ${err.message}`);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Role Rule';
+        }
+      }
+    }
+
+    async function promptAddPathToRole(role) {
+      const input = prompt(`Enter path pattern to grant to ${role} (e.g. /ticketing/**):`);
+      if (!input || !input.trim()) return;
+
+      let path = input.trim();
+      if (!path.startsWith('/')) path = '/' + path;
+
+      const currentRoles = { ...(appState.security.rolePathAccess || {}) };
+      const paths = [...(currentRoles[role] || [])];
+
+      if (paths.includes(path)) {
+        alert(`Path pattern "${path}" is already granted to ${role}.`);
+        return;
+      }
+
+      paths.push(path);
+      currentRoles[role] = paths;
+
+      try {
+        const res = await fetch('/api/v1/config/security/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentRoles)
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to update role (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.rolePathAccess = currentRoles;
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Added "${path}" to ${role}.`);
+      } catch (err) {
+        console.error('Error adding path to role:', err);
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    async function removePathFromRole(role, path) {
+      if (!confirm(`Remove path pattern "${path}" from ${role}?`)) return;
+
+      const currentRoles = { ...(appState.security.rolePathAccess || {}) };
+      const paths = (currentRoles[role] || []).filter(p => p !== path);
+      currentRoles[role] = paths;
+
+      try {
+        const res = await fetch('/api/v1/config/security/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentRoles)
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to remove path (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.rolePathAccess = currentRoles;
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Removed "${path}" from ${role}.`);
+      } catch (err) {
+        console.error('Error removing path from role:', err);
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    async function deleteRoleRule(role) {
+      if (!confirm(`Are you sure you want to completely delete access rules for ${role}?`)) return;
+
+      const currentRoles = { ...(appState.security.rolePathAccess || {}) };
+      delete currentRoles[role];
+
+      try {
+        const res = await fetch('/api/v1/config/security/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentRoles)
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to delete role rule (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.rolePathAccess = currentRoles;
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Deleted access rule for ${role}.`);
+      } catch (err) {
+        console.error('Error deleting role rule:', err);
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    function openAddPublicPathModal() {
+      document.getElementById('addPublicPathModal').classList.remove('hidden');
+      document.getElementById('publicPathModalInput').value = '';
+      setTimeout(() => document.getElementById('publicPathModalInput').focus(), 50);
+    }
+
+    function closeAddPublicPathModal() {
+      document.getElementById('addPublicPathModal').classList.add('hidden');
+      document.getElementById('addPublicPathForm').reset();
+    }
+
+    async function handleSavePublicPathModal(e) {
+      if (e) e.preventDefault();
+      const rawPath = (document.getElementById('publicPathModalInput').value || '').trim();
+      if (!rawPath) {
+        alert('Please enter a path pattern.');
+        return;
+      }
+
+      let path = rawPath;
+      if (!path.startsWith('/')) path = '/' + path;
+
+      const currentPaths = [...(appState.security.publicPaths || [])];
+      if (currentPaths.includes(path)) {
+        alert(`Path "${path}" is already in the public whitelist.`);
+        return;
+      }
+
+      currentPaths.push(path);
+
+      const saveBtn = document.getElementById('publicPathModalSaveBtn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/v1/config/security/public-paths', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: currentPaths })
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to add public path (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.publicPaths = currentPaths;
+        closeAddPublicPathModal();
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Added "${path}" to public whitelist.`);
+      } catch (err) {
+        console.error('Error adding public path:', err);
+        alert(`Error: ${err.message}`);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Add to Whitelist';
+        }
+      }
+    }
+
+    async function deletePublicPath(path) {
+      if (!confirm(`Remove "${path}" from public whitelist? Requests to this endpoint will require authentication.`)) return;
+
+      const currentPaths = (appState.security.publicPaths || []).filter(p => p !== path);
+
+      try {
+        const res = await fetch('/api/v1/config/security/public-paths', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: currentPaths })
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          alert(`Failed to remove public path (${res.status}): ${err}`);
+          return;
+        }
+
+        appState.security.publicPaths = currentPaths;
+        renderAdmin();
+        await loadLiveAdminData();
+        await loadLiveRoutes();
+        showToastNotification(`Removed "${path}" from public whitelist.`);
+      } catch (err) {
+        console.error('Error removing public path:', err);
+        alert(`Error: ${err.message}`);
+      }
     }
 
     // Route Action Context Menu
