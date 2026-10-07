@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -109,7 +108,7 @@ public class SecurityConfiguration {
         };
 
         http.logout(logout -> logout
-                .requiresLogout(ServerWebExchangeMatchers.pathMatchers(HttpMethod.POST, "/logout", HttpMethod.GET, "/logout"))
+                .requiresLogout(ServerWebExchangeMatchers.pathMatchers("/logout"))
                 .logoutSuccessHandler(logoutSuccessHandler)
         );
 
