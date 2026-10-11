@@ -3,6 +3,7 @@ package com.jpg.apigateway.controller;
 import com.jpg.apigateway.config.DynamicRouteDefinitionRepositoryService;
 import com.jpg.apigateway.security.config.GatewaySecurityProperties;
 import com.jpg.apigateway.security.service.DynamicSecurityCacheService;
+import com.jpg.apigateway.security.session.GatewaySessionDto;
 import com.jpg.apigateway.security.session.GatewaySessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
