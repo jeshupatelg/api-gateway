@@ -67,7 +67,7 @@ public class SecurityConfiguration {
 
         http.authorizeExchange(exchanges -> exchanges
                 .matchers(dynamicPublicPathMatcher).permitAll()
-                .pathMatchers("/logout/connect/back-channel/**").permitAll()
+                .pathMatchers("/logout/connect/back-channel/**", "/api/v1/portal/backchannel-logout").permitAll()
                 .pathMatchers("/", "/index.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/static/**", "/api/v1/portal/**").authenticated()
                 .anyExchange().access(rolePathReactiveAuthorizationManager));
 

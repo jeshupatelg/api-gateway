@@ -2318,6 +2318,16 @@
         return;
       }
 
+      if (isCurrent) {
+        // Submit standard POST /logout form to perform OIDC RP-Initiated logout with Keycloak
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/logout';
+        document.body.appendChild(form);
+        form.submit();
+        return;
+      }
+
       try {
         const res = await fetch(`/api/v1/portal/admin/sessions/${sessionId}`, {
           method: 'DELETE',
@@ -2327,11 +2337,6 @@
         if (res.ok) {
           const data = await res.json();
           showToastNotification(data.message || `Session for "${username}" revoked.`);
-          if (isCurrent) {
-            // Submit the logout form to clear cookies & redirect
-            window.location.href = '/logout';
-            return;
-          }
           await loadLiveSessions();
         } else {
           showToastNotification(`Failed to revoke session: HTTP ${res.status}`);

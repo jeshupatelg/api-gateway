@@ -43,17 +43,27 @@ public class GatewaySessionActivityFilter implements WebFilter {
 
                     // 4. Capture Keycloak SID if authenticated
                     if (!session.getAttributes().containsKey("keycloakSid")) {
-                        return ReactiveSecurityContextHolder.getContext()
-                                .doOnNext(secCtx -> {
-                                    if (secCtx.getAuthentication() instanceof OAuth2AuthenticationToken token
-                                            && token.getPrincipal() instanceof OidcUser oidcUser) {
-                                        String sid = (String) oidcUser.getClaims().get("sid");
-                                        if (sid != null && !sid.isBlank()) {
-                                            session.getAttributes().put("keycloakSid", sid);
+                        Object secCtxObj = session.getAttribute("SPRING_SECURITY_CONTEXT");
+                        if (secCtxObj instanceof org.springframework.security.core.context.SecurityContext secCtx
+                                && secCtx.getAuthentication() instanceof OAuth2AuthenticationToken token
+                                && token.getPrincipal() instanceof OidcUser oidcUser) {
+                            String sid = (String) oidcUser.getClaims().get("sid");
+                            if (sid != null && !sid.isBlank()) {
+                                session.getAttributes().put("keycloakSid", sid);
+                            }
+                        } else {
+                            return ReactiveSecurityContextHolder.getContext()
+                                    .doOnNext(secCtx -> {
+                                        if (secCtx.getAuthentication() instanceof OAuth2AuthenticationToken token
+                                                && token.getPrincipal() instanceof OidcUser oidcUser) {
+                                            String sid = (String) oidcUser.getClaims().get("sid");
+                                            if (sid != null && !sid.isBlank()) {
+                                                session.getAttributes().put("keycloakSid", sid);
+                                            }
                                         }
-                                    }
-                                })
-                                .then();
+                                    })
+                                    .then();
+                        }
                     }
                 }
                 return Mono.empty();

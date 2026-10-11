@@ -200,10 +200,40 @@ public class GatewaySessionService {
 
             if (keycloakSid.equals(sid)) {
                 log.info("Back-channel invalidating local WebSession '{}' for Keycloak SID '{}'", session.getId(), keycloakSid);
-                invalidations.add(webSessionStore.removeSession(session.getId()).then(session.invalidate()));
+                invalidations.add(webSessionStore.removeSession(session.getId()).then(session.invalidate().onErrorResume(e -> Mono.empty())));
             }
         }
 
+        if (invalidations.isEmpty()) {
+            log.warn("Back-channel logout: No active WebSession found matching Keycloak SID '{}'", keycloakSid);
+        }
+
+        return Mono.when(invalidations);
+    }
+
+    /**
+     * Invalidates any local session matching the given user subject or username.
+     */
+    public Mono<Void> invalidateBySubject(String subject) {
+        if (subject == null || subject.isBlank()) {
+            return Mono.empty();
+        }
+
+        List<Mono<Void>> invalidations = new ArrayList<>();
+        for (WebSession session : webSessionStore.getSessions().values()) {
+            Object secCtxObj = session.getAttribute("SPRING_SECURITY_CONTEXT");
+            if (secCtxObj instanceof SecurityContext secCtx && secCtx.getAuthentication() != null) {
+                Authentication auth = secCtx.getAuthentication();
+                boolean matches = subject.equalsIgnoreCase(auth.getName());
+                if (!matches && auth.getPrincipal() instanceof OidcUser oidcUser) {
+                    matches = subject.equalsIgnoreCase(oidcUser.getSubject()) || subject.equalsIgnoreCase(oidcUser.getPreferredUsername());
+                }
+                if (matches) {
+                    log.info("Back-channel invalidating local WebSession '{}' for subject '{}'", session.getId(), subject);
+                    invalidations.add(webSessionStore.removeSession(session.getId()).then(session.invalidate()));
+                }
+            }
+        }
         return Mono.when(invalidations);
     }
 }
