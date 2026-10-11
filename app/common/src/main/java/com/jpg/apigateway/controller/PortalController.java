@@ -9,11 +9,14 @@ import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.util.AntPathMatcher;
+import com.jpg.apigateway.security.session.GatewaySessionDto;
+import com.jpg.apigateway.security.session.GatewaySessionService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -30,14 +33,17 @@ public class PortalController {
     private final DynamicRouteDefinitionRepositoryService dynamicRouteDefinitionRepositoryService;
     private final DynamicSecurityCacheService dynamicSecurityCacheService;
     private final GatewaySecurityProperties staticProperties;
+    private final GatewaySessionService gatewaySessionService;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
     public PortalController(DynamicRouteDefinitionRepositoryService dynamicRouteDefinitionRepositoryService,
                             DynamicSecurityCacheService dynamicSecurityCacheService,
-                            GatewaySecurityProperties staticProperties) {
+                            GatewaySecurityProperties staticProperties,
+                            GatewaySessionService gatewaySessionService) {
         this.dynamicRouteDefinitionRepositoryService = dynamicRouteDefinitionRepositoryService;
         this.dynamicSecurityCacheService = dynamicSecurityCacheService;
         this.staticProperties = staticProperties;
+        this.gatewaySessionService = gatewaySessionService;
     }
 
     public record PortalUserDto(
@@ -307,5 +313,94 @@ public class PortalController {
             return b;
         }
         return "true".equalsIgnoreCase(String.valueOf(enabledObj));
+    }
+
+    /**
+     * Returns a list of all active user sessions (Admin only).
+     */
+    @GetMapping(value = "/admin/sessions", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<List<GatewaySessionDto>>> getActiveSessions(Authentication auth, ServerWebExchange exchange) {
+        if (!isUserAdmin(auth)) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+        }
+        return exchange.getSession()
+                .map(WebSession::getId)
+                .defaultIfEmpty("")
+                .map(currentSessionId -> ResponseEntity.ok(gatewaySessionService.getActiveSessions(currentSessionId)));
+    }
+
+    /**
+     * Revokes a specific active session by ID (Admin only).
+     */
+    @DeleteMapping(value = "/admin/sessions/{sessionId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<Map<String, Object>>> revokeSession(@PathVariable("sessionId") String sessionId, Authentication auth) {
+        if (!isUserAdmin(auth)) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+        }
+        return gatewaySessionService.revokeSession(sessionId)
+                .map(res -> {
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("success", res.success());
+                    body.put("keycloakRevoked", res.keycloakRevoked());
+                    body.put("message", res.message());
+                    return ResponseEntity.ok(body);
+                });
+    }
+
+    /**
+     * Revokes all active sessions other than the current session (Admin only).
+     */
+    @PostMapping(value = "/admin/sessions/revoke-all-others", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<Map<String, Object>>> revokeAllOtherSessions(Authentication auth, ServerWebExchange exchange) {
+        if (!isUserAdmin(auth)) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+        }
+        return exchange.getSession()
+                .map(WebSession::getId)
+                .defaultIfEmpty("")
+                .flatMap(gatewaySessionService::revokeAllOtherSessions)
+                .map(ResponseEntity::ok);
+    }
+
+    /**
+     * Optional custom back-channel logout receiver: parses logout_token and revokes local session.
+     */
+    @PostMapping(value = "/backchannel-logout", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Mono<ResponseEntity<Void>> handleBackchannelLogout(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    String logoutToken = formData.getFirst("logout_token");
+                    if (logoutToken != null && !logoutToken.isBlank()) {
+                        try {
+                            String[] parts = logoutToken.split("\\.");
+                            if (parts.length >= 2) {
+                                String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), java.nio.charset.StandardCharsets.UTF_8);
+                                if (payloadJson.contains("\"sid\"")) {
+                                    int sidIdx = payloadJson.indexOf("\"sid\"");
+                                    int colonIdx = payloadJson.indexOf(":", sidIdx);
+                                    int quote1 = payloadJson.indexOf("\"", colonIdx);
+                                    int quote2 = payloadJson.indexOf("\"", quote1 + 1);
+                                    if (quote1 > 0 && quote2 > quote1) {
+                                        String sid = payloadJson.substring(quote1 + 1, quote2);
+                                        return gatewaySessionService.invalidateByKeycloakSid(sid)
+                                                .thenReturn(ResponseEntity.ok().<Void>build());
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    return Mono.just(ResponseEntity.ok().<Void>build());
+                });
+    }
+
+    private boolean isUserAdmin(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(Objects::nonNull)
+                .map(a -> a.startsWith("ROLE_") ? a.substring("ROLE_".length()) : a)
+                .anyMatch(a -> a.equalsIgnoreCase("admin"));
     }
 }

@@ -72,6 +72,8 @@ springdoc:
 gateway:
   security:
     public-paths:
+      - /logout/connect/back-channel/**
+      - /api/v1/portal/backchannel-logout
       - /keycloak/**
       - /oauth2/**
       - /login/oauth2/code/**

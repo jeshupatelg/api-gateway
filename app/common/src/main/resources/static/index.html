@@ -192,6 +192,10 @@
           <button onclick="switchAdminTab('yaml')" id="tabBtnYaml" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
             Import / Export YAML
           </button>
+          <button onclick="switchAdminTab('sessions')" id="tabBtnSessions" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Active Sessions
+          </button>
         </div>
 
         <div class="flex items-center gap-2">
@@ -273,6 +277,106 @@
           </div>
           <pre id="yamlViewer" class="p-4 rounded-lg bg-slate-950 text-indigo-300 border border-slate-800 text-xs overflow-x-auto max-h-96 leading-relaxed font-mono"></pre>
         </div>
+      </div>
+
+      <!-- Admin Tab 4: Active Sessions -->
+      <div id="adminTabSessions" class="hidden space-y-5">
+        
+        <!-- Header & Quick Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Sessions</div>
+              <div class="text-2xl font-bold text-white mt-1" id="statActiveSessions">0</div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Unique Users</div>
+              <div class="text-2xl font-bold text-white mt-1" id="statUniqueUsers">0</div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Keycloak SSO</div>
+              <div class="text-sm font-bold text-indigo-400 mt-1 truncate max-w-[160px]" id="statSsoRealm">OIDC Connected</div>
+              <div class="text-[10px] text-slate-500">Backchannel Invalidation ON</div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions Table Card -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-sm">
+          <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                Active Client & Gateway Sessions
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" id="sessionsBadgeCount">0</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Real-time authenticated sessions with remote client IP, browser details, and Keycloak SSO correlation.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="loadLiveSessions()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+                <svg id="refreshSessionsSpinner" class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+              <button onclick="promptRevokeAllOtherSessions()" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Revoke All Others
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-950/70 text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="px-4 py-3">User & Roles</th>
+                  <th class="px-4 py-3">Remote Client IP</th>
+                  <th class="px-4 py-3">Browser / Platform</th>
+                  <th class="px-4 py-3">Keycloak Session SID</th>
+                  <th class="px-4 py-3">Last Active</th>
+                  <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="activeSessionsTableBody" class="divide-y divide-slate-800 font-sans">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="emptySessionsNotice" class="hidden text-center py-12 px-4">
+            <div class="w-10 h-10 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center mx-auto mb-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <div class="text-xs font-semibold text-slate-400">No active sessions discovered</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">Sessions will appear here once authenticated requests are received.</div>
+          </div>
+        </div>
+
       </div>
 
     </section>
@@ -669,6 +773,7 @@
           document.getElementById('yamlViewer').textContent = yamlText;
         }
         if (appState.currentView === 'admin') renderAdmin();
+        loadLiveSessions();
       } catch (e) {
         console.error('Error fetching admin data:', e);
       }
@@ -1344,13 +1449,20 @@
       document.getElementById('adminTabRoutes').classList.toggle('hidden', tab !== 'routes');
       document.getElementById('adminTabSecurity').classList.toggle('hidden', tab !== 'security');
       document.getElementById('adminTabYaml').classList.toggle('hidden', tab !== 'yaml');
+      document.getElementById('adminTabSessions').classList.toggle('hidden', tab !== 'sessions');
 
-      ['routes', 'security', 'yaml'].forEach(t => {
+      ['routes', 'security', 'yaml', 'sessions'].forEach(t => {
         const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-        btn.className = t === tab 
-          ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition shadow-sm"
-          : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition";
+        if (btn) {
+          btn.className = t === tab 
+            ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition shadow-sm"
+            : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition";
+        }
       });
+
+      if (tab === 'sessions') {
+        loadLiveSessions();
+      }
     }
 
     // Gateway Filters State
@@ -1998,6 +2110,265 @@
         return JSON.parse(str);
       } catch (e) {
         throw new Error('YAML parser CDN not loaded and input is not JSON: ' + e.message);
+      }
+    }
+
+    // ==========================================
+    // ACTIVE SESSIONS MANAGEMENT
+    // ==========================================
+    let cachedSessions = [];
+
+    async function loadLiveSessions() {
+      const spinner = document.getElementById('refreshSessionsSpinner');
+      if (spinner) spinner.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/v1/portal/admin/sessions', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          cachedSessions = await res.json();
+          renderActiveSessions(cachedSessions);
+        } else if (res.status === 403) {
+          console.warn('Forbidden: User is not admin.');
+        }
+      } catch (err) {
+        console.error('Failed to load active sessions:', err);
+      } finally {
+        if (spinner) spinner.classList.remove('animate-spin');
+      }
+    }
+
+    function parseUserAgent(ua) {
+      if (!ua || ua === 'Unknown') return { browser: 'Unknown', os: 'Device', isMobile: false };
+      let browser = 'Browser';
+      let os = 'OS';
+      let isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
+
+      if (/Edg\//i.test(ua)) browser = 'Edge';
+      else if (/Chrome\//i.test(ua)) browser = 'Chrome';
+      else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+      else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = 'Safari';
+      else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser = 'Opera';
+
+      if (/Windows NT 10/i.test(ua)) os = 'Windows 10/11';
+      else if (/Windows/i.test(ua)) os = 'Windows';
+      else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+      else if (/Linux/i.test(ua)) os = 'Linux';
+      else if (/Android/i.test(ua)) os = 'Android';
+      else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+
+      return { browser, os, isMobile };
+    }
+
+    function formatTimeAgo(instantStr) {
+      if (!instantStr) return 'Unknown';
+      const d = new Date(instantStr);
+      if (isNaN(d.getTime())) return instantStr;
+      const sec = Math.floor((new Date() - d) / 1000);
+      if (sec < 45) return 'Just now';
+      if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+      if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+      return `${Math.floor(sec / 86400)}d ago`;
+    }
+
+    function copyTextToClipboard(text, label) {
+      if (!text) return;
+      navigator.clipboard.writeText(text);
+      showToastNotification(`${label || 'Text'} copied to clipboard!`);
+    }
+
+    function renderActiveSessions(sessions) {
+      const tbody = document.getElementById('activeSessionsTableBody');
+      const emptyNotice = document.getElementById('emptySessionsNotice');
+      const statActive = document.getElementById('statActiveSessions');
+      const statUsers = document.getElementById('statUniqueUsers');
+      const badgeCount = document.getElementById('sessionsBadgeCount');
+
+      if (!tbody) return;
+
+      const list = sessions || [];
+      if (statActive) statActive.textContent = list.length;
+      if (statUsers) statUsers.textContent = new Set(list.map(s => s.username)).size;
+      if (badgeCount) badgeCount.textContent = list.length;
+
+      if (list.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyNotice) emptyNotice.classList.remove('hidden');
+        return;
+      }
+      if (emptyNotice) emptyNotice.classList.add('hidden');
+
+      tbody.innerHTML = list.map(s => {
+        const uaInfo = parseUserAgent(s.userAgent);
+        const rolesHtml = (s.roles || []).map(r => 
+          `<span class="px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] uppercase font-mono">${escapeHtml(r)}</span>`
+        ).join(' ');
+
+        const sidShort = s.keycloakSessionId && s.keycloakSessionId !== 'N/A' 
+          ? (s.keycloakSessionId.length > 12 ? `${s.keycloakSessionId.slice(0, 8)}...${s.keycloakSessionId.slice(-4)}` : s.keycloakSessionId)
+          : '<span class="text-slate-500">Local Only</span>';
+
+        const userInitial = (s.displayName || s.username || 'U').charAt(0).toUpperCase();
+
+        return `
+          <tr class="hover:bg-slate-900/80 transition ${s.current ? 'bg-indigo-950/20' : ''}">
+            <!-- User Info -->
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${s.current ? 'from-emerald-500 to-cyan-500' : 'from-indigo-600 to-cyan-500'} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                  ${userInitial}
+                </div>
+                <div class="min-w-0">
+                  <div class="font-semibold text-slate-100 flex items-center gap-1.5">
+                    ${escapeHtml(s.displayName || s.username)}
+                    ${s.current ? '<span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono font-semibold">YOU</span>' : ''}
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-mono truncate">@${escapeHtml(s.username)}</div>
+                  <div class="mt-1 flex items-center gap-1 flex-wrap">${rolesHtml}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Client IP -->
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded bg-slate-950 text-indigo-300 border border-slate-800 font-mono text-[11px]">
+                  ${escapeHtml(s.clientIp)}
+                </span>
+                <button type="button" onclick="copyTextToClipboard('${escapeHtml(s.clientIp)}', 'IP Address')" class="text-slate-500 hover:text-slate-300 transition" title="Copy IP">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+
+            <!-- Browser / Platform -->
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-2">
+                <div class="text-slate-400">
+                  ${uaInfo.isMobile 
+                    ? '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' 
+                    : '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'}
+                </div>
+                <div>
+                  <div class="font-medium text-slate-200">${escapeHtml(uaInfo.browser)}</div>
+                  <div class="text-[10px] text-slate-500">${escapeHtml(uaInfo.os)}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Keycloak Session SID -->
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono text-[11px] text-slate-300" title="${escapeHtml(s.keycloakSessionId)}">
+                  ${sidShort}
+                </span>
+                ${s.keycloakSessionId && s.keycloakSessionId !== 'N/A' ? `
+                  <button type="button" onclick="copyTextToClipboard('${escapeHtml(s.keycloakSessionId)}', 'Keycloak SID')" class="text-slate-500 hover:text-slate-300 transition" title="Copy Full SID">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+
+            <!-- Last Active -->
+            <td class="px-4 py-3.5">
+              <div class="font-medium text-slate-200">${formatTimeAgo(s.lastAccessTime)}</div>
+              <div class="text-[10px] text-slate-500" title="${escapeHtml(s.loginTime)}">
+                Logged in: ${formatTimeAgo(s.loginTime)}
+              </div>
+            </td>
+
+            <!-- Actions -->
+            <td class="px-4 py-3.5 text-right">
+              ${s.current ? `
+                <div class="inline-flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Current
+                  </span>
+                  <button type="button" onclick="revokeSession('${escapeHtml(s.sessionId)}', '${escapeHtml(s.username)}', true)" class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-medium transition cursor-pointer">
+                    Sign Out
+                  </button>
+                </div>
+              ` : `
+                <button type="button" onclick="revokeSession('${escapeHtml(s.sessionId)}', '${escapeHtml(s.username)}', false)" class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ml-auto">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Revoke
+                </button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function revokeSession(sessionId, username, isCurrent) {
+      const confirmPrompt = isCurrent 
+        ? `Are you sure you want to end your current session? You will be signed out of both API Gateway and Keycloak.`
+        : `Are you sure you want to revoke the session for "${username}"?\nThis will immediately terminate access in both API Gateway and Keycloak.`;
+
+      if (!confirm(confirmPrompt)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/portal/admin/sessions/${sessionId}`, {
+          method: 'DELETE',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          showToastNotification(data.message || `Session for "${username}" revoked.`);
+          if (isCurrent) {
+            // Submit the logout form to clear cookies & redirect
+            window.location.href = '/logout';
+            return;
+          }
+          await loadLiveSessions();
+        } else {
+          showToastNotification(`Failed to revoke session: HTTP ${res.status}`);
+        }
+      } catch (err) {
+        console.error('Error revoking session:', err);
+        showToastNotification(`Error revoking session: ${err.message}`);
+      }
+    }
+
+    async function promptRevokeAllOtherSessions() {
+      const otherCount = cachedSessions.filter(s => !s.current).length;
+      if (otherCount === 0) {
+        showToastNotification('No other active sessions to revoke.');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to revoke all ${otherCount} other active sessions?\nAll other users and devices will be immediately signed out.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/portal/admin/sessions/revoke-all-others', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          showToastNotification(data.message || 'All other sessions have been revoked.');
+          await loadLiveSessions();
+        } else {
+          showToastNotification(`Failed to revoke other sessions: HTTP ${res.status}`);
+        }
+      } catch (err) {
+        console.error('Error revoking other sessions:', err);
+        showToastNotification(`Error: ${err.message}`);
       }
     }
 

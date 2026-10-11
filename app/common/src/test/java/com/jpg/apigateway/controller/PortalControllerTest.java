@@ -3,6 +3,7 @@ package com.jpg.apigateway.controller;
 import com.jpg.apigateway.config.DynamicRouteDefinitionRepositoryService;
 import com.jpg.apigateway.security.config.GatewaySecurityProperties;
 import com.jpg.apigateway.security.service.DynamicSecurityCacheService;
+import com.jpg.apigateway.security.session.GatewaySessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,11 +38,14 @@ class PortalControllerTest {
     @Mock
     private GatewaySecurityProperties staticProperties;
 
+    @Mock
+    private GatewaySessionService gatewaySessionService;
+
     private PortalController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new PortalController(dynamicRouteRepository, dynamicSecurityCacheService, staticProperties);
+        controller = new PortalController(dynamicRouteRepository, dynamicSecurityCacheService, staticProperties, gatewaySessionService);
     }
 
     @Test
@@ -155,6 +159,63 @@ class PortalControllerTest {
 
         StepVerifier.create(controller.getAccessibleRoutes(authAdmin))
                 .expectNextCount(2)
+                .verifyComplete();
+    }
+
+    @Test
+    void testGetActiveSessions_AdminSuccess() {
+        Authentication authAdmin = new TestingAuthenticationToken("admin", "creds", "ROLE_ADMIN");
+        org.springframework.mock.web.server.MockServerWebExchange exchange =
+                org.springframework.mock.web.server.MockServerWebExchange.from(
+                        org.springframework.mock.http.server.reactive.MockServerHttpRequest.get("/api/v1/portal/admin/sessions").build());
+
+        GatewaySessionDto sessionDto = new GatewaySessionDto(
+                "s-123", "kc-456", "admin", "Admin", "admin@domain.com",
+                List.of("admin"), "127.0.0.1", "Chrome",
+                java.time.Instant.now(), java.time.Instant.now(), true);
+
+        when(gatewaySessionService.getActiveSessions(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(List.of(sessionDto));
+
+        StepVerifier.create(controller.getActiveSessions(authAdmin, exchange))
+                .assertNext(response -> {
+                    assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
+                    assertNotNull(response.getBody());
+                    assertEquals(1, response.getBody().size());
+                    assertEquals("admin", response.getBody().get(0).username());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testGetActiveSessions_NonAdminForbidden() {
+        Authentication authDevops = new TestingAuthenticationToken("alice", "creds", "ROLE_DEVOPS");
+        org.springframework.mock.web.server.MockServerWebExchange exchange =
+                org.springframework.mock.web.server.MockServerWebExchange.from(
+                        org.springframework.mock.http.server.reactive.MockServerHttpRequest.get("/api/v1/portal/admin/sessions").build());
+
+        StepVerifier.create(controller.getActiveSessions(authDevops, exchange))
+                .assertNext(response -> {
+                    assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, response.getStatusCode());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testRevokeSession_AdminSuccess() {
+        Authentication authAdmin = new TestingAuthenticationToken("admin", "creds", "ROLE_ADMIN");
+
+        when(gatewaySessionService.revokeSession("s-123"))
+                .thenReturn(reactor.core.publisher.Mono.just(
+                        new GatewaySessionService.RevokeResponse(true, true, "Revoked successfully")));
+
+        StepVerifier.create(controller.revokeSession("s-123", authAdmin))
+                .assertNext(response -> {
+                    assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
+                    assertNotNull(response.getBody());
+                    assertEquals(true, response.getBody().get("success"));
+                    assertEquals(true, response.getBody().get("keycloakRevoked"));
+                })
                 .verifyComplete();
     }
 }

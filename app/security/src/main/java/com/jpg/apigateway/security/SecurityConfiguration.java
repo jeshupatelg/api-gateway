@@ -22,7 +22,14 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
+import com.jpg.apigateway.security.session.GatewayWebSessionStore;
+import org.springframework.security.oauth2.client.oidc.server.session.InMemoryReactiveOidcSessionRegistry;
+import org.springframework.security.oauth2.client.oidc.server.session.ReactiveOidcSessionRegistry;
+import org.springframework.web.server.session.DefaultWebSessionManager;
+import org.springframework.web.server.session.WebSessionManager;
+
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -60,10 +67,13 @@ public class SecurityConfiguration {
 
         http.authorizeExchange(exchanges -> exchanges
                 .matchers(dynamicPublicPathMatcher).permitAll()
+                .pathMatchers("/logout/connect/back-channel/**").permitAll()
                 .pathMatchers("/", "/index.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/static/**", "/api/v1/portal/**").authenticated()
                 .anyExchange().access(rolePathReactiveAuthorizationManager));
 
         http.oauth2Login(Customizer.withDefaults());
+
+        http.oidcLogout(oidc -> oidc.backChannel(Customizer.withDefaults()));
 
         ServerLogoutSuccessHandler logoutSuccessHandler = (exchange, authentication) -> {
             String idToken = null;
@@ -114,5 +124,23 @@ public class SecurityConfiguration {
 
         http.csrf(ServerHttpSecurity.CsrfSpec::disable);
         return http.build();
+    }
+
+    @Bean
+    public GatewayWebSessionStore webSessionStore(
+            @Value("${server.reactive.session.timeout:${GATEWAY_SESSION_TIMEOUT:30m}}") Duration sessionTimeout) {
+        return new GatewayWebSessionStore(sessionTimeout);
+    }
+
+    @Bean
+    public WebSessionManager webSessionManager(GatewayWebSessionStore webSessionStore) {
+        DefaultWebSessionManager manager = new DefaultWebSessionManager();
+        manager.setSessionStore(webSessionStore);
+        return manager;
+    }
+
+    @Bean
+    public ReactiveOidcSessionRegistry reactiveOidcSessionRegistry() {
+        return new InMemoryReactiveOidcSessionRegistry();
     }
 }
