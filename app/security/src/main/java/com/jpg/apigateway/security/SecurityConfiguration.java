@@ -23,8 +23,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import com.jpg.apigateway.security.session.GatewayWebSessionStore;
-import org.springframework.security.oauth2.client.oidc.server.session.InMemoryReactiveOidcSessionRegistry;
-import org.springframework.security.oauth2.client.oidc.server.session.ReactiveOidcSessionRegistry;
 import org.springframework.web.server.session.DefaultWebSessionManager;
 import org.springframework.web.server.session.WebSessionManager;
 
@@ -72,8 +70,6 @@ public class SecurityConfiguration {
                 .anyExchange().access(rolePathReactiveAuthorizationManager));
 
         http.oauth2Login(Customizer.withDefaults());
-
-        http.oidcLogout(oidc -> oidc.backChannel(Customizer.withDefaults()));
 
         ServerLogoutSuccessHandler logoutSuccessHandler = (exchange, authentication) -> {
             String idToken = null;
@@ -137,10 +133,5 @@ public class SecurityConfiguration {
         DefaultWebSessionManager manager = new DefaultWebSessionManager();
         manager.setSessionStore(webSessionStore);
         return manager;
-    }
-
-    @Bean
-    public ReactiveOidcSessionRegistry reactiveOidcSessionRegistry() {
-        return new InMemoryReactiveOidcSessionRegistry();
     }
 }
