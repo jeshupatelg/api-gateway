@@ -1,10 +1,12 @@
+name: api-gateway-test
+
 services:
-  api-gateway:
+  api-gateway-test:
     image: jeshupatelg/apigw-homeserver:${APIGW_VERSION}
-    container_name: api-gateway
+    container_name: api-gateway-test
     # entrypoint: ["java", "-Dlogging.config=/config/logback.xml", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/opt/api-gateway/app.jar"]
     ports:
-      - "${GATEWAY_HOST_IP}:${GATEWAY_HOST_PORT}:8080"   # expose gateway externally
+      - "${GATEWAY_HOST_IP:-0.0.0.0}:${GATEWAY_TEST_PORT:-8889}:8080"   # expose test gateway externally
     #   - "5005:5005"                 # expose JVM debug port
     environment:
       # Same vars as app/common/src/main/resources/application.yaml; override via shell or .env beside this file.
